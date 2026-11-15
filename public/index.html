@@ -677,6 +677,20 @@ function CommunityHeader(d, isJoined, isMod){
   '</div>';
 }
 
+function capturePostDraft(){
+  var t=$("n-title"),c=$("n-city"),b=$("n-body"),bg=$("n-budget"),tm=$("n-time"),l=$("n-loc");
+  if(t||c||b||bg||tm||l){
+    ui.postDraft = {
+      title: t ? t.value : (ui.postDraft ? ui.postDraft.title : ""),
+      city: c ? c.value : (ui.postDraft ? ui.postDraft.city : ""),
+      body: b ? b.value : (ui.postDraft ? ui.postDraft.body : ""),
+      budget: bg ? bg.value : (ui.postDraft ? ui.postDraft.budget : ""),
+      time: tm ? tm.value : (ui.postDraft ? ui.postDraft.time : ""),
+      loc: l ? l.value : (ui.postDraft ? ui.postDraft.loc : "")
+    };
+  }
+}
+
 function CreatePostBar(d, CU){
   var commName = d.community ? d.community.name : "";
   var isCab = commName.toLowerCase().indexOf("cab") !== -1;
@@ -708,14 +722,31 @@ function CreatePostModal(d, CU, ui){
           '<button class="modal-close-btn" data-act="hclosepostmodal" aria-label="Close">✕</button>' +
         '</div>' +
         '<p class="mute" style="margin-bottom:16px">You need an account to create a post or offer assistance.</p>' +
-        '<div class="row" style="gap:8px">' +
+        '<div class="row" style="gap:8px;flex-wrap:wrap">' +
           '<button class="b" data-act="u-anon">Get u/account</button>' +
           '<button class="b alt" data-act="u-showlogin">Sign in with recovery key</button>' +
           '<button class="b alt" data-act="hclosepostmodal">Cancel</button>' +
         '</div>' +
+        (ui.showLogin ? (
+          '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">' +
+            '<label for="u-modal-rec">Recovery key</label>' +
+            '<div class="row" style="gap:8px;margin-top:6px">' +
+              '<input id="u-modal-rec" placeholder="Paste your recovery key" style="flex:1">' +
+              '<button class="b" data-act="u-modal-login">Sign in</button>' +
+              '<button class="b alt" data-act="u-hidelogin">Cancel</button>' +
+            '</div>' +
+          '</div>'
+        ) : '') +
       '</div>' +
     '</div>';
   }
+
+  var curTitle = (ui.postDraft && ui.postDraft.title !== undefined) ? ui.postDraft.title : "";
+  var curCity = (ui.postDraft && ui.postDraft.city !== undefined) ? ui.postDraft.city : defaultCity;
+  var curBody = (ui.postDraft && ui.postDraft.body !== undefined) ? ui.postDraft.body : "";
+  var curBudget = (ui.postDraft && ui.postDraft.budget !== undefined) ? ui.postDraft.budget : "";
+  var curTime = (ui.postDraft && ui.postDraft.time !== undefined) ? ui.postDraft.time : "";
+  var curLoc = (ui.postDraft && ui.postDraft.loc !== undefined) ? ui.postDraft.loc : "";
 
   return '<div class="modal-backdrop" data-act="hclosepostmodal">' +
     '<div class="modal-dialog" onclick="event.stopPropagation()">' +
@@ -729,9 +760,9 @@ function CreatePostModal(d, CU, ui){
         '<button type="button" class="b ' + (newType === "OFFER" ? "" : "alt") + '" style="flex:1;padding:8px 12px;font-size:13px" data-act="hsetposttype" data-v="OFFER">OFFER (Offering service)</button>' +
       '</div>' +
       '<label for="n-title">Title <span style="color:var(--accent)">*</span></label>' +
-      '<input id="n-title" maxlength="100" placeholder="' + (newType === "NEED" ? "e.g. Need a cab to airport at 6 AM" : "e.g. Offering airport cab rides, ₹800") + '">' +
+      '<input id="n-title" maxlength="100" placeholder="' + (newType === "NEED" ? "e.g. Need a cab to airport at 6 AM" : "e.g. Offering airport cab rides, ₹800") + '" value="' + esc(curTitle) + '">' +
       '<label for="n-city" style="margin-top:10px">City <span style="color:var(--accent)">*</span></label>' +
-      '<input id="n-city" maxlength="50" placeholder="e.g. Delhi, Mumbai, Bangalore" value="' + esc(defaultCity) + '">' +
+      '<input id="n-city" maxlength="50" placeholder="e.g. Delhi, Mumbai, Bangalore" value="' + esc(curCity) + '">' +
       '<div style="margin:12px 0 6px">' +
         '<button type="button" class="c-act" data-act="htoggledetails" style="font-size:13px;color:var(--accent);font-weight:600">' +
           (ui.showPostDetails ? '▾ Hide extra details' : '▸ + Add details (budget, time, landmark, photo)') +
@@ -740,14 +771,14 @@ function CreatePostModal(d, CU, ui){
       (ui.showPostDetails ? (
         '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' +
           '<label for="n-body">Details (optional)</label>' +
-          '<textarea id="n-body" maxlength="500" placeholder="Describe the details, requirements or terms…"></textarea>' +
+          '<textarea id="n-body" maxlength="500" placeholder="Describe the details, requirements or terms…">' + esc(curBody) + '</textarea>' +
           '<div class="row" style="margin-top:8px;gap:8px">' +
-            '<div style="flex:1"><label for="n-budget">Budget / Price</label><input id="n-budget" placeholder="e.g. ₹500"></div>' +
-            '<div style="flex:1"><label for="n-time">Date & Time</label><input id="n-time" placeholder="e.g. Tomorrow 8 AM"></div>' +
+            '<div style="flex:1"><label for="n-budget">Budget / Price</label><input id="n-budget" placeholder="e.g. ₹500" value="' + esc(curBudget) + '"></div>' +
+            '<div style="flex:1"><label for="n-time">Date & Time</label><input id="n-time" placeholder="e.g. Tomorrow 8 AM" value="' + esc(curTime) + '"></div>' +
           '</div>' +
           '<div style="margin-top:8px">' +
             '<label for="n-loc">Area / Landmark</label>' +
-            '<input id="n-loc" placeholder="e.g. Sector 18, Terminal 3">' +
+            '<input id="n-loc" placeholder="e.g. Sector 18, Terminal 3" value="' + esc(curLoc) + '">' +
           '</div>' +
           '<div class="row" style="margin-top:12px;gap:8px;align-items:center">' +
             '<button type="button" class="b alt" data-act="hpickimg" style="font-size:13px">📷 Attach Photo</button>' +
@@ -1148,12 +1179,14 @@ function helpView(){
   var isJoined=d.community&&d.community.joined;
   var isMod=d.community&&(d.community.userRole==="owner"||d.community.userRole==="moderator");
   var emgBanner=ui.emgAlert?'<div class="card" style="background:rgba(239,68,68,0.12);border:2px solid #ef4444;margin-bottom:16px"><h2 style="color:#ef4444;margin:0 0 6px">🚨 Emergency keyword detected</h2><p style="margin:0 0 10px">'+esc(ui.emgAlert)+'</p><div class="row"><a class="call" href="tel:112" style="display:inline-block">📞 Call 112</a> <button class="b alt" data-act="dismissemg">Dismiss</button></div></div>':'';
+  var errBanner=ui.err?'<div class="err" style="margin-bottom:14px;padding:10px 14px;background:rgba(239,68,68,0.1);border-radius:10px">'+esc(ui.err)+'</div>':'';
 
   return '<div class="comm-wrap">'+
     searchBar+
     '<p style="margin-bottom:14px"><button class="b alt" data-act="hback" data-v="list">← All communities</button></p>'+
     ubar+
     emgBanner+
+    errBanner+
     CommunityHeader(d,isJoined,isMod)+
     '<div class="comm-layout">'+
       '<div class="comm-main">'+
@@ -1239,9 +1272,10 @@ async function handleScan(text){
 }
 document.addEventListener("change",async function(e){
  if(e.target.id==="n-imgfile"&&e.target.files&&e.target.files[0]){
+  capturePostDraft();
   var file=e.target.files[0];
-  if(file.size>2*1024*1024){ui.err="Image exceeds 2MB limit.";rerender();return}
-  ui.imgUploading=true;ui.err="";rerender();
+  if(file.size>2*1024*1024){ui.postErr="Image exceeds 2MB limit.";rerender();return}
+  ui.imgUploading=true;ui.postErr="";rerender();
   try{
    var ab=await file.arrayBuffer();
    var r=await fetch("/api/upload",{
@@ -1255,7 +1289,7 @@ document.addEventListener("change",async function(e){
    ui.postImgUrl=res.url;
    toast("Image attached");
   }catch(err){
-   ui.err="Failed to upload image: "+err.message;
+   ui.postErr="Failed to upload image: "+err.message;
   }finally{
    ui.imgUploading=false;
    rerender();
@@ -1499,10 +1533,13 @@ async function act(a,v){
     toast("Community rules saved.");
     break}
   case "dismissemg":ui.emgAlert=null;break;
-  case "u-anon":{var ad=await api("POST","/api/auth/register",{});CU=ad.user;ui.cRec=ad.recovery;toast("Created u/"+CU.username);break}
+  case "u-anon":{var ad=await api("POST","/api/auth/register",{});CU=ad.user;NICK=CU.username;ui.cRec=ad.recovery;toast("Created u/"+CU.username);break}
   case "u-showlogin":ui.showLogin=true;break;
   case "u-hidelogin":ui.showLogin=false;break;
-  case "u-login":{var uk=val("u-rec");if(!uk){ui.err="Paste your recovery key.";break}var ud=await api("POST","/api/auth/login",{recovery:uk});CU=ud.user;ui.showLogin=false;toast("Signed in as u/"+CU.username);break}
+  case "u-login":{var uk=val("u-rec")||val("u-modal-rec");if(!uk){ui.err="Paste your recovery key.";break}var ud=await api("POST","/api/auth/login",{recovery:uk});CU=ud.user;NICK=CU.username;ui.showLogin=false;toast("Signed in as u/"+CU.username);break}
+  case "u-modal-login":{var muk=val("u-modal-rec")||val("u-rec");if(!muk){ui.postErr="Paste your recovery key.";rerender();return;}
+    try{var mud=await api("POST","/api/auth/login",{recovery:muk});CU=mud.user;NICK=CU.username;ui.showLogin=false;ui.postErr="";toast("Signed in as u/"+CU.username);}
+    catch(err){ui.postErr=err.message||"Invalid recovery key.";rerender();return;}break}
   case "u-setname":{var un=val("u-newname");if(!un){ui.err="Enter a username.";break}var nd=await api("POST","/api/auth/username",{username:un});CU=nd.user;toast("Username set: u/"+CU.username);break}
   case "u-showrec":{var rd=await api("POST","/api/auth/recovery");ui.cRec=rd.recovery;break}
   case "u-logout":
@@ -1534,7 +1571,7 @@ async function act(a,v){
     break}
   case "hdeals":ui.cm={v:"deals"};break;
   case "hopendeal":ui.cm={v:"deal",dealId:v};break;
-  case "hsetposttype":ui.newPostType=v;rerender();return;
+  case "hsetposttype":capturePostDraft();ui.newPostType=v;rerender();return;
   case "acceptoffer":{
     if(!CU){ui.err="Sign in to accept an offer.";break}
     var pts=v.split("|"),helperId=pts[0],commentId=pts[1];
@@ -1576,18 +1613,25 @@ async function act(a,v){
   case "hcommcityclear":{ui.cm.commCity=null;ui.cm.list=null;break}
   case "toggletheme":toggleTheme();break;
   case "hopenpostmodal":
-    if(!CU){ui.err="Join or sign in with an account to post in this community.";rerender();return;}
-    ui.postModalOpen=true;if(v)ui.newPostType=v;ui.postErr="";rerender();return;
-  case "hclosepostmodal":ui.postModalOpen=false;ui.postErr="";rerender();return;
-  case "htoggledetails":ui.showPostDetails=!ui.showPostDetails;rerender();return;
+    capturePostDraft();
+    ui.postModalOpen=true;
+    if(v) ui.newPostType=v;
+    else if(!ui.newPostType) ui.newPostType="NEED";
+    ui.postErr="";
+    rerender();
+    return;
+  case "hclosepostmodal":ui.postModalOpen=false;ui.postErr="";ui.postDraft=null;rerender();return;
+  case "htoggledetails":capturePostDraft();ui.showPostDetails=!ui.showPostDetails;rerender();return;
   case "hpickimg":{var fi=$("n-imgfile");if(fi)fi.click();return;}
-  case "hclearimg":ui.postImgUrl=null;ui.postImgName=null;rerender();break;
+  case "hclearimg":capturePostDraft();ui.postImgUrl=null;ui.postImgName=null;rerender();break;
   case "hnewc":{if(!CU){ui.err="Please get an account or sign in first.";break}
     var cn=val("cm-name");if(!cn){ui.err="Give your community a name.";break}
     var rc=await api("POST","/api/communities",{name:cn,desc:val("cm-desc"),city:val("cm-city")});ui.cm={v:"comm",name:rc.name};break}
-  case "hnewp":{if(!CU){ui.postErr="Please get an account or sign in first.";rerender();break}
-    var pt=val("n-title");if(!pt){ui.postErr="Title is required.";rerender();break}
-    var pc=val("n-city");if(!pc){ui.postErr="City is required.";rerender();break}
+  case "hnewp":{
+    capturePostDraft();
+    if(!CU){ui.postErr="Please get an account or sign in first.";rerender();return;}
+    var pt=val("n-title");if(!pt){ui.postErr="Title is required.";rerender();return;}
+    var pc=val("n-city");if(!pc){ui.postErr="City is required.";rerender();return;}
     ui.postErr="";
     var rp=await api("POST","/api/communities/"+ui.cm.name+"/posts",{
       title:pt,
@@ -1603,10 +1647,12 @@ async function act(a,v){
     ui.showPostDetails=false;
     ui.postImgUrl=null;
     ui.postImgName=null;
+    ui.postDraft=null;
     if(rp.emergency){
       ui.emgAlert=rp.message||"Immediate crisis keywords detected. Call 112.";
     }
-    ui.cm={v:"post",name:ui.cm.name,pid:rp.id};break}
+    ui.cm={v:"post",name:ui.cm.name,pid:rp.id};
+    break}
   case "ccomment":{if(!CU){ui.err="Please get an account or sign in first.";break}
     var ct=val("c-text");if(!ct)break;await api("POST","/api/posts/"+ui.cm.pid+"/comments",{text:ct});break}
   case "pkey":PK=val("k-in");if(!PK)break;lset("tb-key",PK);break;
@@ -1641,6 +1687,7 @@ document.addEventListener("click",function(e){var b=e.target.closest("[data-act]
 document.addEventListener("keydown",function(e){
   if(e.key==="Enter"&&e.target.id==="msg"){var b=document.querySelector('[data-act="send"]');if(b)act("send",b.dataset.v)}
   if(e.key==="Enter"&&e.target.id==="deal-msg"){var db=document.querySelector('[data-act="hsenddealmsg"]');if(db)act("hsenddealmsg")}
+  if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("create-post-bar")){e.preventDefault();act("hopenpostmodal")}
 });
 document.addEventListener("input",function(e){
   if(e.target.id==="comm-city-input"){
