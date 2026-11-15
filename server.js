@@ -167,8 +167,13 @@ app.post("/api/me/rooms/:id/msg", needOwner, (req, res) => {
   if (!r || r.ownerId !== req.o.id) return fail(res, 404, "Not found.");
   if (r.status !== "active") return fail(res, 409, "Accept the request first.");
   const t = clip(req.body.text, MAX_LEN);
-  if (!t) return fail(res, 400, "Empty message.");
-  r.msgs.push({ from: "owner", text: t, t: Date.now() });
+  const img = req.body.imageUrl && typeof req.body.imageUrl === "string" ? clip(req.body.imageUrl, 300) : null;
+  const loc = req.body.location && typeof req.body.location === "object" && req.body.location.lat != null && req.body.location.lng != null ? {
+    lat: Number(req.body.location.lat),
+    lng: Number(req.body.location.lng)
+  } : null;
+  if (!t && !img && !loc) return fail(res, 400, "Empty message.");
+  r.msgs.push({ from: "owner", text: t || "", imageUrl: img, location: loc, t: Date.now() });
   save();
   res.json({ ok: true });
 });
@@ -224,8 +229,13 @@ app.post("/api/room/msg", (req, res) => {
   const used = r.msgs.filter(m => m.from === "finder").length;
   if (r.status === "pending" && used >= LIMIT_PRE) return fail(res, 409, "Wait for the owner to accept before sending more.");
   const t = clip(req.body.text, MAX_LEN);
-  if (!t) return fail(res, 400, "Empty message.");
-  r.msgs.push({ from: "finder", text: t, t: Date.now() });
+  const img = req.body.imageUrl && typeof req.body.imageUrl === "string" ? clip(req.body.imageUrl, 300) : null;
+  const loc = req.body.location && typeof req.body.location === "object" && req.body.location.lat != null && req.body.location.lng != null ? {
+    lat: Number(req.body.location.lat),
+    lng: Number(req.body.location.lng)
+  } : null;
+  if (!t && !img && !loc) return fail(res, 400, "Empty message.");
+  r.msgs.push({ from: "finder", text: t || "", imageUrl: img, location: loc, t: Date.now() });
   const o = DB.owners[r.ownerId];
   if (o) note(o, "New message from " + r.fname + " about " + r.item);
   save();

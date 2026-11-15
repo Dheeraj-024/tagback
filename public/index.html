@@ -56,6 +56,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .m{max-width:80%;padding:8px 12px;border-radius:14px;background:var(--theirs);align-self:flex-start;word-wrap:break-word}
 .m.me{background:var(--mine);color:var(--minetx);align-self:flex-end}
 .m small{display:block;opacity:.7;font-size:11px}
+.chat-bubble-img{max-width:100%;max-height:220px;border-radius:10px;margin-top:6px;object-fit:cover;border:1px solid var(--line);display:block;cursor:pointer}
+.chat-loc-badge{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:6px 12px;background:rgba(240,169,59,0.18);border:1px solid rgba(240,169,59,0.4);border-radius:8px;color:var(--accent);text-decoration:none;font-size:12px;font-weight:600;transition:opacity 150ms}
+.chat-loc-badge:hover{opacity:0.85}
+.m.me .chat-loc-badge{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.5);color:#fff}
+@media(max-width:600px){.hide-mobile{display:none}}
 .sys{align-self:center;font-size:13px;color:var(--mute)}
 .qrbox{width:200px;background:#fff;padding:8px;border-radius:12px;border:1px solid var(--line)}
 .qrbox svg{width:100%;height:auto;display:block}
@@ -323,13 +328,52 @@ function chatPanel(r,who){
   if(who==="owner"){h+='<p class="mute">From '+esc(r.fname)+(r.loc?" · found at "+esc(r.loc):"")+(r.desc?" · "+esc(r.desc):"")+'</p>'}
   h+='<div class="chat" aria-live="polite">'+r.msgs.map(function(m){
     if(m.from==="sys")return '<div class="sys">'+esc(m.text)+'</div>';
-    var me=m.from===who;return '<div class="m'+(me?" me":"")+'"><small>'+(m.from==="owner"?"Owner":esc(r.fname))+' · '+tm(m.t)+'</small>'+esc(m.text)+'</div>'}).join("")+'</div>';
+    var me=m.from===who;
+    var content='';
+    if(m.text)content+='<div style="white-space:pre-wrap;word-break:break-word">'+esc(m.text)+'</div>';
+    if(m.imageUrl)content+='<div style="margin-top:6px"><a href="'+esc(m.imageUrl)+'" target="_blank" rel="noopener"><img src="'+esc(m.imageUrl)+'" alt="Attached photo" class="chat-bubble-img"></a></div>';
+    if(m.location&&m.location.lat!=null&&m.location.lng!=null){
+      var mapUrl='https://www.google.com/maps?q='+encodeURIComponent(m.location.lat+','+m.location.lng);
+      content+='<div style="margin-top:6px"><a href="'+mapUrl+'" target="_blank" rel="noopener" class="chat-loc-badge">📍 Current Location ('+Number(m.location.lat).toFixed(4)+', '+Number(m.location.lng).toFixed(4)+') ↗</a></div>';
+    }
+    return '<div class="m'+(me?" me":"")+'"><small>'+(m.from==="owner"?"Owner":esc(r.fname))+' · '+tm(m.t)+'</small>'+content+'</div>';
+  }).join("")+'</div>';
   var open=r.status==="pending"||r.status==="active";
   if(who==="owner"&&r.status==="pending")h+='<div class="row"><button class="b ok" data-act="accept" data-v="'+r.id+'">Accept and reply</button><button class="b bad" data-act="reject" data-v="'+r.id+'">Reject</button><button class="b bad" data-act="block" data-v="'+r.id+'">Block finder</button></div><p class="mute" style="margin-top:8px">You can read messages now. Accept to reply.</p>';
   else if(open){
     var pre=who==="finder"&&r.status==="pending";var used=r.msgs.filter(function(m){return m.from==="finder"}).length;
     if(pre&&used>=LIMIT_PRE)h+='<p class="mute">You’ve sent '+LIMIT_PRE+' messages. Please wait for the owner to accept before sending more.</p>';
-    else h+='<div class="row"><input id="msg" maxlength="'+MAX_LEN+'" placeholder="'+(pre?"Message ("+(LIMIT_PRE-used)+" left until accepted)":"Type a message")+'" style="flex:1;min-width:160px"><button class="b" data-act="send" data-v="'+who+'|'+r.id+'">Send</button></div>';
+    else {
+      var previews='';
+      if(ui.chatImg){
+        previews+='<div class="row" style="align-items:center;gap:8px;margin-bottom:8px;background:var(--bg);padding:6px 10px;border-radius:8px;border:1px solid var(--border)">'+
+          '<img src="'+esc(ui.chatImg)+'" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">'+
+          '<span style="font-size:12px;color:var(--text);flex:1">Photo attached</span>'+
+          '<button type="button" class="b alt" data-act="chat-clear-img" style="padding:2px 8px;font-size:11px">✕ Remove</button>'+
+        '</div>';
+      }
+      if(ui.chatLoc){
+        previews+='<div class="row" style="align-items:center;gap:8px;margin-bottom:8px;background:var(--bg);padding:6px 10px;border-radius:8px;border:1px solid var(--border)">'+
+          '<span style="font-size:14px">📍</span>'+
+          '<span style="font-size:12px;color:var(--text);flex:1">Location: '+Number(ui.chatLoc.lat).toFixed(4)+', '+Number(ui.chatLoc.lng).toFixed(4)+'</span>'+
+          '<button type="button" class="b alt" data-act="chat-clear-loc" style="padding:2px 8px;font-size:11px">✕ Remove</button>'+
+        '</div>';
+      }
+      if(ui.chatLocLoading){
+        previews+='<div style="font-size:12px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>📍</span> Fetching current location…</div>';
+      }
+      if(ui.chatImgUploading){
+        previews+='<div style="font-size:12px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>📷</span> Uploading photo…</div>';
+      }
+      var curVal=ui.chatDraft||"";
+      h+=previews+'<div class="row" style="gap:6px;align-items:center">'+
+        '<input id="msg" maxlength="'+MAX_LEN+'" value="'+esc(curVal)+'" placeholder="'+(pre?"Message ("+(LIMIT_PRE-used)+" left until accepted)":"Type a message")+'" style="flex:1;min-width:140px">'+
+        '<button type="button" class="b alt" data-act="chat-pick-img" title="Attach photo" style="padding:8px 10px;font-size:13px;display:flex;align-items:center;gap:4px">📷<span class="hide-mobile"> Photo</span></button>'+
+        '<button type="button" class="b alt" data-act="chat-get-loc" title="Share current location" style="padding:8px 10px;font-size:13px;display:flex;align-items:center;gap:4px">📍<span class="hide-mobile"> Location</span></button>'+
+        '<input type="file" id="chat-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">'+
+        '<button class="b" data-act="send" data-v="'+who+'|'+r.id+'">Send</button>'+
+      '</div>';
+    }
     if(who==="owner")h+='<div class="row" style="margin-top:10px"><button class="b ok" data-act="recover" data-v="'+r.id+'">Mark as recovered</button><button class="b alt" data-act="close" data-v="'+r.id+'">Close chat</button><button class="b bad" data-act="block" data-v="'+r.id+'">Block</button></div>';
   }else h+='<p class="mute">This conversation is '+r.status+'. No further messages can be sent.</p>';
   return h+'<div class="err">'+esc(ui.err)+'</div></div>';
@@ -1296,6 +1340,30 @@ document.addEventListener("change",async function(e){
   }
   return;
  }
+ if(e.target.id==="chat-file-input"&&e.target.files&&e.target.files[0]){
+  var file=e.target.files[0];
+  if(file.size>2*1024*1024){ui.err="Photo exceeds 2MB limit.";rerender();return}
+  ui.chatImgUploading=true;ui.err="";rerender();
+  try{
+   var ab=await file.arrayBuffer();
+   var r=await fetch("/api/upload",{
+    method:"POST",
+    credentials:"same-origin",
+    headers:{"Content-Type":file.type||"application/octet-stream"},
+    body:ab
+   });
+   var res=await r.json();
+   if(!r.ok)throw new Error(res.error||"Upload failed");
+   ui.chatImg=res.url;
+   toast("Photo attached!");
+  }catch(err){
+   ui.err="Failed to upload photo: "+err.message;
+  }finally{
+   ui.chatImgUploading=false;
+   rerender();
+  }
+  return;
+ }
  if(e.target.id!=="qrfile"||!e.target.files[0])return;
  try{var bmp=await createImageBitmap(e.target.files[0]);var s=Math.min(1,1000/Math.max(bmp.width,bmp.height));var t=await decodeSource(bmp,Math.round(bmp.width*s),Math.round(bmp.height*s));
   if(t)handleScan(t);else{ui.err="No QR code found in that photo. Move closer and use good light.";render()}}
@@ -1328,7 +1396,7 @@ async function refresh(force){
   if(!ui.authChecked||ui.role==="place"){ui.authChecked=true;await checkCommunityAuth();}
   await pollHelp();
   updateContextSSE();
-  var snap=JSON.stringify([ui.cm,S,ui.fRoomObj,ui.role,ui.fMode,ui.err,ui.scanned,ui.scanning,ui.rides,ui.ping,ui.adm,ui.pStep,ui.sug,ui.busy,ui.pTab,ui.aTab,ui.badKey,ui.unreadNotifs]);
+  var snap=JSON.stringify([ui.cm,S,ui.fRoomObj,ui.role,ui.fMode,ui.err,ui.scanned,ui.scanning,ui.rides,ui.ping,ui.adm,ui.pStep,ui.sug,ui.busy,ui.pTab,ui.aTab,ui.badKey,ui.unreadNotifs,ui.chatImg,ui.chatLoc,ui.chatLocLoading,ui.chatImgUploading]);
   if(force||snap!==last){last=snap;rerender()}
 }
 async function act(a,v){
@@ -1670,9 +1738,47 @@ async function act(a,v){
     if(!it||!nm||!ms){ui.err="Item, display name and message are required.";break}
     var q=await api("POST","/api/tag/"+ui.tagId+"/request",{item:it,fname:nm,desc:val("f-desc"),loc:val("f-loc"),msg:ms});
     RT=q.roomToken;lset("tb-room",RT);ui.fMode="chat";toast("Sent. The owner has been notified.");break}
-  case "send":{var p=v.split("|"),t=val("msg");if(!t)break;
-    if(p[0]==="owner")await oapi("POST","/api/me/rooms/"+p[1]+"/msg",{text:t});
-    else await api("POST","/api/room/msg",{text:t},{"x-room":RT});break}
+  case "chat-pick-img":{
+    var curMsg=val("msg");if(curMsg)ui.chatDraft=curMsg;
+    var fi=$("chat-file-input");if(fi)fi.click();
+    return;}
+  case "chat-clear-img":{
+    var curMsg=val("msg");if(curMsg)ui.chatDraft=curMsg;
+    ui.chatImg=null;rerender();return;}
+  case "chat-clear-loc":{
+    var curMsg=val("msg");if(curMsg)ui.chatDraft=curMsg;
+    ui.chatLoc=null;rerender();return;}
+  case "chat-get-loc":{
+    var curMsg=val("msg");if(curMsg)ui.chatDraft=curMsg;
+    if(!navigator.geolocation){
+      ui.err="Geolocation is not supported by your browser.";
+      rerender();
+      return;
+    }
+    ui.chatLocLoading=true;ui.err="";rerender();
+    navigator.geolocation.getCurrentPosition(function(pos){
+      ui.chatLocLoading=false;
+      ui.chatLoc={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      toast("Location added to message");
+      rerender();
+    },function(err){
+      ui.chatLocLoading=false;
+      ui.err="Location error: "+(err.code===1?"Permission denied. Please allow location access in your browser.":err.message);
+      rerender();
+    },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+    return;}
+  case "send":{
+    var p=v.split("|"),t=val("msg")||ui.chatDraft||"";
+    var img=ui.chatImg||null,loc=ui.chatLoc||null;
+    if(!t&&!img&&!loc)break;
+    var payload={text:t,imageUrl:img,location:loc};
+    if(p[0]==="owner")await oapi("POST","/api/me/rooms/"+p[1]+"/msg",payload);
+    else await api("POST","/api/room/msg",payload,{"x-room":RT});
+    val("msg","");
+    ui.chatDraft="";
+    ui.chatImg=null;
+    ui.chatLoc=null;
+    break}
   case "accept":await oapi("POST","/api/me/rooms/"+v+"/accept");ui.tab="active";ui.sel=v;break;
   case "reject":await oapi("POST","/api/me/rooms/"+v+"/reject");ui.sel=null;break;
   case "block":await oapi("POST","/api/me/rooms/"+v+"/block");ui.sel=null;toast("Finder blocked");break;
