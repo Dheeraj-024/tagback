@@ -715,8 +715,8 @@ function CreatePostModal(d, CU, ui){
   var postErrHtml = ui.postErr ? '<div class="err" style="margin-bottom:12px;padding:8px;background:rgba(239,68,68,0.1);border-radius:8px">' + esc(ui.postErr) + '</div>' : '';
 
   if (!CU) {
-    return '<div class="modal-backdrop" data-act="hclosepostmodal">' +
-      '<div class="modal-dialog" onclick="event.stopPropagation()">' +
+    return '<div class="modal-backdrop">' +
+      '<div class="modal-dialog">' +
         '<div class="modal-header">' +
           '<h2>Join c/' + esc(commName) + ' to post</h2>' +
           '<button class="modal-close-btn" data-act="hclosepostmodal" aria-label="Close">✕</button>' +
@@ -748,8 +748,8 @@ function CreatePostModal(d, CU, ui){
   var curTime = (ui.postDraft && ui.postDraft.time !== undefined) ? ui.postDraft.time : "";
   var curLoc = (ui.postDraft && ui.postDraft.loc !== undefined) ? ui.postDraft.loc : "";
 
-  return '<div class="modal-backdrop" data-act="hclosepostmodal">' +
-    '<div class="modal-dialog" onclick="event.stopPropagation()">' +
+  return '<div class="modal-backdrop">' +
+    '<div class="modal-dialog">' +
       '<div class="modal-header">' +
         '<h2>Create a Post in c/' + esc(commName) + '</h2>' +
         '<button class="modal-close-btn" data-act="hclosepostmodal" aria-label="Close">✕</button>' +
@@ -1683,9 +1683,18 @@ async function act(a,v){
   }}catch(e){ui.err=e.message}
   refresh(true);
 }
-document.addEventListener("click",function(e){var b=e.target.closest("[data-act]");if(b)act(b.dataset.act,b.dataset.v)});
+document.addEventListener("click",function(e){
+  if(e.target&&e.target.classList&&e.target.classList.contains("modal-backdrop")){
+    act("hclosepostmodal");
+    return;
+  }
+  var b=e.target.closest("[data-act]");
+  if(b)act(b.dataset.act,b.dataset.v);
+});
 document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"&&ui.postModalOpen){act("hclosepostmodal");return;}
   if(e.key==="Enter"&&e.target.id==="msg"){var b=document.querySelector('[data-act="send"]');if(b)act("send",b.dataset.v)}
+  if(e.key==="Enter"&&e.target.id==="u-modal-rec"){act("u-modal-login")}
   if(e.key==="Enter"&&e.target.id==="deal-msg"){var db=document.querySelector('[data-act="hsenddealmsg"]');if(db)act("hsenddealmsg")}
   if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("create-post-bar")){e.preventDefault();act("hopenpostmodal")}
 });
