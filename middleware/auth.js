@@ -114,6 +114,51 @@ const requireCommunityOwner = (communityParam = "name") => {
   };
 };
 
+// requireUploadAuth: allows Community users (cookie), Owners (x-owner header), or Finders (x-room header)
+const requireUploadAuth = (req, res, next) => {
+  // 1. Check Community user session from cookie
+  const cookies = parseCookies(req);
+  const token = cookies.tb_session;
+  if (token) {
+    const tokenHash = sha(token);
+    const user = queries.getUserBySessionHash(tokenHash);
+    if (user && !user.banned) {
+      req.user = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        karma: user.karma,
+        usernameChosen: !!user.username_chosen,
+        createdAt: user.created_at
+      };
+      return next();
+    }
+  }
+
+  // 2. Check Owner auth (x-owner header)
+  const oHeader = req.get("x-owner");
+  if (oHeader) {
+    const h = sha(oHeader);
+    const o = Object.values(dbRef.owners || {}).find(x => x.tokenHash === h || (x.more || []).includes(h));
+    if (o) {
+      req.o = o;
+      return next();
+    }
+  }
+
+  // 3. Check Room auth (x-room header)
+  const rHeader = req.get("x-room");
+  if (rHeader) {
+    const r = roomOf(req);
+    if (r) {
+      req.room = r;
+      return next();
+    }
+  }
+
+  return fail(res, 401, "Sign in or join conversation to upload photos.");
+};
+
 module.exports = {
   setAuthContext,
   needOwner,
@@ -122,6 +167,7 @@ module.exports = {
   tagOwner,
   optionalUser,
   requireUser,
+  requireUploadAuth,
   requireCommunityModerator,
   requireCommunityOwner
 };

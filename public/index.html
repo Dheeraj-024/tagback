@@ -365,6 +365,21 @@ function chatPanel(r,who){
       if(ui.chatImgUploading){
         previews+='<div style="font-size:12px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>📷</span> Uploading photo…</div>';
       }
+      var manualLocBox='';
+      if(ui.manualLocOpen){
+        manualLocBox='<div style="margin-top:10px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px">'+
+          '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--accent);display:flex;align-items:center;gap:6px"><span>📍</span> Location Assistance</div>'+
+          '<p class="mute" style="font-size:12px;margin:0 0 10px;line-height:1.45">'+
+            'GPS was blocked by your browser. To enable automatic GPS, click the lock/tune icon in your address bar and set Location to Allow, then click <button type="button" class="b alt" data-act="chat-get-loc" style="padding:2px 8px;font-size:11px">Retry GPS</button>.'+
+            '<br>Or enter your current location or landmark manually below:'+
+          '</p>'+
+          '<div class="row" style="gap:6px">'+
+            '<input id="manual-loc-input" placeholder="e.g. Central Library, 2nd floor, Near stairs" style="flex:1">'+
+            '<button type="button" class="b" data-act="send-manual-loc" data-v="'+who+'|'+r.id+'">Send Location</button>'+
+            '<button type="button" class="b alt" data-act="close-manual-loc">Cancel</button>'+
+          '</div>'+
+        '</div>';
+      }
       var curVal=ui.chatDraft||"";
       h+=previews+'<div class="row" style="gap:6px;align-items:center">'+
         '<input id="msg" maxlength="'+MAX_LEN+'" value="'+esc(curVal)+'" placeholder="'+(pre?"Message ("+(LIMIT_PRE-used)+" left until accepted)":"Type a message")+'" style="flex:1;min-width:140px">'+
@@ -372,7 +387,7 @@ function chatPanel(r,who){
         '<button type="button" class="b alt" data-act="chat-get-loc" title="Share current location" style="padding:8px 10px;font-size:13px;display:flex;align-items:center;gap:4px">📍<span class="hide-mobile"> Location</span></button>'+
         '<input type="file" id="chat-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">'+
         '<button class="b" data-act="send" data-v="'+who+'|'+r.id+'">Send</button>'+
-      '</div>';
+      '</div>'+manualLocBox;
     }
     if(who==="owner")h+='<div class="row" style="margin-top:10px"><button class="b ok" data-act="recover" data-v="'+r.id+'">Mark as recovered</button><button class="b alt" data-act="close" data-v="'+r.id+'">Close chat</button><button class="b bad" data-act="block" data-v="'+r.id+'">Block</button></div>';
   }else h+='<p class="mute">This conversation is '+r.status+'. No further messages can be sent.</p>';
@@ -1322,10 +1337,13 @@ document.addEventListener("change",async function(e){
   ui.imgUploading=true;ui.postErr="";rerender();
   try{
    var ab=await file.arrayBuffer();
+   var hdrs={"Content-Type":file.type||"application/octet-stream"};
+   if(OT)hdrs["x-owner"]=OT;
+   if(RT)hdrs["x-room"]=RT;
    var r=await fetch("/api/upload",{
     method:"POST",
     credentials:"same-origin",
-    headers:{"Content-Type":file.type||"application/octet-stream"},
+    headers:hdrs,
     body:ab
    });
    var res=await r.json();
@@ -1346,16 +1364,34 @@ document.addEventListener("change",async function(e){
   ui.chatImgUploading=true;ui.err="";rerender();
   try{
    var ab=await file.arrayBuffer();
+   var hdrs={"Content-Type":file.type||"application/octet-stream"};
+   if(OT)hdrs["x-owner"]=OT;
+   if(RT)hdrs["x-room"]=RT;
    var r=await fetch("/api/upload",{
     method:"POST",
     credentials:"same-origin",
-    headers:{"Content-Type":file.type||"application/octet-stream"},
+    headers:hdrs,
     body:ab
    });
    var res=await r.json();
    if(!r.ok)throw new Error(res.error||"Upload failed");
-   ui.chatImg=res.url;
-   toast("Photo attached!");
+   var who=ui.role==="owner"?"owner":"finder";
+   var roomId=ui.sel||(ui.fRoomObj&&ui.fRoomObj.id);
+   if(roomId){
+     var curText=val("msg")||ui.chatDraft||"";
+     var payload={text:curText,imageUrl:res.url,location:ui.chatLoc||null};
+     if(who==="owner")await oapi("POST","/api/me/rooms/"+roomId+"/msg",payload);
+     else await api("POST","/api/room/msg",payload,{"x-room":RT});
+     val("msg","");
+     ui.chatDraft="";
+     ui.chatImg=null;
+     ui.chatLoc=null;
+     toast("Photo sent!");
+     refresh(true);
+   }else{
+     ui.chatImg=res.url;
+     toast("Photo attached!");
+   }
   }catch(err){
    ui.err="Failed to upload photo: "+err.message;
   }finally{
@@ -1396,7 +1432,7 @@ async function refresh(force){
   if(!ui.authChecked||ui.role==="place"){ui.authChecked=true;await checkCommunityAuth();}
   await pollHelp();
   updateContextSSE();
-  var snap=JSON.stringify([ui.cm,S,ui.fRoomObj,ui.role,ui.fMode,ui.err,ui.scanned,ui.scanning,ui.rides,ui.ping,ui.adm,ui.pStep,ui.sug,ui.busy,ui.pTab,ui.aTab,ui.badKey,ui.unreadNotifs,ui.chatImg,ui.chatLoc,ui.chatLocLoading,ui.chatImgUploading]);
+  var snap=JSON.stringify([ui.cm,S,ui.fRoomObj,ui.role,ui.fMode,ui.err,ui.scanned,ui.scanning,ui.rides,ui.ping,ui.adm,ui.pStep,ui.sug,ui.busy,ui.pTab,ui.aTab,ui.badKey,ui.unreadNotifs,ui.chatImg,ui.chatLoc,ui.chatLocLoading,ui.chatImgUploading,ui.manualLocOpen]);
   if(force||snap!==last){last=snap;rerender()}
 }
 async function act(a,v){
@@ -1751,21 +1787,58 @@ async function act(a,v){
   case "chat-get-loc":{
     var curMsg=val("msg");if(curMsg)ui.chatDraft=curMsg;
     if(!navigator.geolocation){
-      ui.err="Geolocation is not supported by your browser.";
+      ui.err="Geolocation is not supported by your browser. Please enter your location manually.";
+      ui.manualLocOpen=true;
       rerender();
       return;
     }
     ui.chatLocLoading=true;ui.err="";rerender();
-    navigator.geolocation.getCurrentPosition(function(pos){
+    navigator.geolocation.getCurrentPosition(async function(pos){
       ui.chatLocLoading=false;
-      ui.chatLoc={lat:pos.coords.latitude,lng:pos.coords.longitude};
-      toast("Location added to message");
-      rerender();
+      ui.manualLocOpen=false;
+      ui.err="";
+      var loc={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      var who=ui.role==="owner"?"owner":"finder";
+      var roomId=ui.sel||(ui.fRoomObj&&ui.fRoomObj.id);
+      if(roomId){
+        var curText=val("msg")||ui.chatDraft||"";
+        var payload={text:curText||"📍 Shared current location",imageUrl:ui.chatImg||null,location:loc};
+        if(who==="owner")await oapi("POST","/api/me/rooms/"+roomId+"/msg",payload);
+        else await api("POST","/api/room/msg",payload,{"x-room":RT});
+        val("msg","");
+        ui.chatDraft="";
+        ui.chatImg=null;
+        ui.chatLoc=null;
+        toast("Current location sent!");
+        refresh(true);
+      } else {
+        ui.chatLoc=loc;
+        toast("Location added to message");
+        rerender();
+      }
     },function(err){
       ui.chatLocLoading=false;
-      ui.err="Location error: "+(err.code===1?"Permission denied. Please allow location access in your browser.":err.message);
+      ui.manualLocOpen=true;
+      ui.err="Location error: "+(err.code===1?"Permission denied. Please allow location in your browser (click 🔒 in address bar) or enter your location below.":err.message);
       rerender();
     },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+    return;}
+  case "send-manual-loc":{
+    var mloc=val("manual-loc-input");
+    if(!mloc){ui.err="Please enter a location or landmark.";rerender();return;}
+    var p=v.split("|"),who=p[0],rid=p[1];
+    var payload={text:"📍 Current location: "+mloc};
+    if(who==="owner")await oapi("POST","/api/me/rooms/"+rid+"/msg",payload);
+    else await api("POST","/api/room/msg",payload,{"x-room":RT});
+    ui.manualLocOpen=false;
+    ui.err="";
+    toast("Location sent!");
+    refresh(true);
+    return;}
+  case "close-manual-loc":{
+    ui.manualLocOpen=false;
+    ui.err="";
+    rerender();
     return;}
   case "send":{
     var p=v.split("|"),t=val("msg")||ui.chatDraft||"";
@@ -1800,6 +1873,7 @@ document.addEventListener("click",function(e){
 document.addEventListener("keydown",function(e){
   if(e.key==="Escape"&&ui.postModalOpen){act("hclosepostmodal");return;}
   if(e.key==="Enter"&&e.target.id==="msg"){var b=document.querySelector('[data-act="send"]');if(b)act("send",b.dataset.v)}
+  if(e.key==="Enter"&&e.target.id==="manual-loc-input"){var mb=document.querySelector('[data-act="send-manual-loc"]');if(mb)act("send-manual-loc",mb.dataset.v)}
   if(e.key==="Enter"&&e.target.id==="u-modal-rec"){act("u-modal-login")}
   if(e.key==="Enter"&&e.target.id==="deal-msg"){var db=document.querySelector('[data-act="hsenddealmsg"]');if(db)act("hsenddealmsg")}
   if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("create-post-bar")){e.preventDefault();act("hopenpostmodal")}

@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { requireUser } = require("../middleware/auth");
+const { requireUploadAuth } = require("../middleware/auth");
 const { storage, MAX_IMAGE_SIZE_BYTES } = require("../lib/storage");
-const { limit, rateKey } = require("../middleware/rateLimit");
+const { limit } = require("../middleware/rateLimit");
 const { fail } = require("../lib/utils");
 
 // Raw binary parser middleware specifically for direct binary uploads
@@ -11,10 +11,11 @@ const rawParser = express.raw({
   limit: "3mb"
 });
 
-// POST /api/upload - Upload an image (auth required)
-router.post("/", requireUser, rawParser, async (req, res) => {
-  // Rate limit: 15 uploads per 10 minutes per user
-  if (!limit(rateKey(req, "upld"), 15, 600e3)) {
+// POST /api/upload - Upload an image (auth required: user, owner, or room finder)
+router.post("/", requireUploadAuth, rawParser, async (req, res) => {
+  // Rate limit: 20 uploads per 10 minutes per user/owner/room/IP
+  const rKey = req.user ? ("upld:u:" + req.user.id) : (req.o ? ("upld:o:" + req.o.id) : (req.room ? ("upld:r:" + req.room.id) : ("upld:ip:" + req.ip)));
+  if (!limit(rKey, 20, 600e3)) {
     return fail(res, 429, "Upload rate limit reached. Please wait a few minutes.");
   }
 
