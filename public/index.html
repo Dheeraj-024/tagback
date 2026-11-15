@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TagBack – private QR lost-and-found</title>
+<meta name="description" content="Put a private QR sticker on your belongings. Finders can reach you without ever seeing your phone number or email.">
+<meta name="theme-color" content="#12203f">
+<meta property="og:title" content="TagBack – private QR lost-and-found">
+<meta property="og:description" content="One scan brings it home. Your contact details stay private.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='2' width='22' height='28' rx='7' fill='%23f4a62a'/%3E%3Ccircle cx='16' cy='9' r='3' fill='%2312203f'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#e9eef4;--surface:#fff;--ink:#14213d;--mute:#5b6b82;--line:#cfd8e3;--tag:#f4a62a;--tagink:#14213d;--ok:#1f8a5b;--bad:#c2410c;--mine:#14213d;--minetx:#fff;--theirs:#e3eaf2}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0d1524;--surface:#16223a;--ink:#e8eef8;--mute:#93a3bd;--line:#2a3a58;--tag:#f4a62a;--tagink:#14213d;--ok:#4cc38a;--bad:#f08a5d;--mine:#f4a62a;--minetx:#14213d;--theirs:#22314f}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0d1524;--surface:#16223a;--ink:#e8eef8;--mute:#93a3bd;--line:#2a3a58;--tag:#f4a62a;--tagink:#14213d;--ok:#4cc38a;--bad:#f08a5d;--mine:#f4a62a;--minetx:#14213d;--theirs:#22314f}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Outfit",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:920px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.brand{font-size:22px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.hole{width:14px;height:14px;border-radius:50%;border:3px solid var(--tag);display:inline-block}
+.seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;color:var(--mute);padding:6px 16px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+h1{font-size:28px;line-height:1.15;margin:0 0 8px;letter-spacing:-.02em}
+h2{font-size:18px;margin:0 0 8px}
+p{margin:0 0 10px}.mute{color:var(--mute);font-size:14px}
+label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:72px;resize:vertical}
+button.b{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;background:var(--tag);color:var(--tagink)}
+button.b.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.b.bad{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+button.b.ok{background:var(--ok);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:999px;cursor:pointer}
+.tabs button.on{background:var(--tag);color:var(--tagink);border-color:var(--tag)}
+.badge{background:var(--bad);color:#fff;border-radius:999px;font-size:12px;padding:1px 7px;margin-left:6px}
+.split{display:grid;grid-template-columns:280px 1fr;gap:14px}
+@media(max-width:720px){.split{grid-template-columns:1fr}}
+.item{display:block;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.item.on{border-color:var(--tag);box-shadow:0 0 0 2px var(--tag)}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--mute)}
+.pill.pending{color:var(--tagink);background:var(--tag);border-color:var(--tag)}.pill.active{color:#fff;background:var(--ok);border-color:var(--ok)}
+.pill.recovered{color:#fff;background:#3b6fd4;border-color:#3b6fd4}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding:4px 2px;margin:10px 0}
+.m{max-width:80%;padding:8px 12px;border-radius:14px;background:var(--theirs);align-self:flex-start;word-wrap:break-word}
+.m.me{background:var(--mine);color:var(--minetx);align-self:flex-end}
+.m small{display:block;opacity:.7;font-size:11px}
+.sys{align-self:center;font-size:13px;color:var(--mute)}
+.qrbox{width:200px;background:#fff;padding:8px;border-radius:12px;border:1px solid var(--line)}
+.qrbox svg{width:100%;height:auto;display:block}
+.code{font-family:ui-monospace,Menlo,monospace;background:var(--bg);border:1px dashed var(--line);padding:6px 10px;border-radius:8px;word-break:break-all;font-size:13px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;z-index:9}
+.err{color:var(--bad);font-size:14px;margin-top:6px}
+.call{display:block;text-align:center;text-decoration:none;color:var(--bad);border:2px solid var(--bad);border-radius:10px;padding:10px;font-weight:700;margin:8px 0}
+button.b.emg{width:100%;background:var(--bad);color:#fff;font-size:18px;padding:16px}
+details summary{cursor:pointer}
+
+/* ---- Reddit core mechanics styles ---- */
+.vbox{display:inline-flex;align-items:center;gap:3px;background:var(--bg);padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.vbtn{background:none;border:none;cursor:pointer;font-size:12px;line-height:1;padding:3px 4px;color:var(--mute);border-radius:4px}
+.vbtn:hover{color:var(--ink)}
+.vbtn.v-up{color:#e04e14;font-weight:700}
+.vbtn.v-down{color:#4e74e6;font-weight:700}
+.vscore{font-size:13px;font-weight:700;min-width:18px;text-align:center}
+.c-node{border-left:2px solid var(--line);margin:8px 0 8px 10px;padding-left:10px}
+.c-meta{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.c-act{font-size:12px;color:var(--mute);cursor:pointer;background:none;border:none;padding:0;text-decoration:none}
+.c-act:hover{color:var(--ink);text-decoration:underline}
+.stabs{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.stabs button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--mute);padding:5px 12px;border-radius:6px;cursor:pointer}
+.stabs button.on{background:var(--ink);color:var(--surface)}
+
+/* ---- polish layer ---- */
+:root{--head:"Bricolage Grotesque","Outfit",system-ui,sans-serif}
+body{font-family:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.brand{font-family:var(--head)}
+h1{font-size:clamp(30px,5.2vw,46px);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:12px}
+h2{font-weight:700;letter-spacing:-.01em}h3{font-size:17px;margin:10px 0 4px}
+.wrap{max-width:980px;padding:0 20px 40px}
+header{position:sticky;top:0;z-index:5;margin:0 -20px 22px;padding:12px 20px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{cursor:pointer}.hole{width:16px;height:16px;border-width:4px}
+.seg{flex-wrap:wrap}.seg button{transition:background .15s,color .15s}
+.card{border-radius:16px;padding:22px;box-shadow:0 10px 24px -16px rgba(18,32,63,.25)}
+input,textarea{background:var(--surface);transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus{border-color:var(--tag);box-shadow:0 0 0 3px color-mix(in srgb,var(--tag) 30%,transparent);outline:0}
+button.b{transition:filter .15s,transform .1s}button.b:hover{filter:brightness(.95)}button.b:active{transform:translateY(1px)}
+button.b.big{padding:13px 22px;font-size:16px}
+.item{transition:border-color .15s}.item:hover{border-color:var(--tag)}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:32px;align-items:center;padding:20px 0 34px}
+.lead{font-size:18px;color:var(--mute);max-width:46ch;margin-bottom:20px}
+.tagcard{justify-self:center;position:relative;width:230px;background:var(--tag);color:var(--tagink);border-radius:24px;padding:48px 20px 18px;transform-origin:50% -34px;animation:swing 2.6s cubic-bezier(.2,.7,.2,1) both;box-shadow:0 24px 40px -22px rgba(18,32,63,.55)}
+.tagcard:before{content:"";position:absolute;top:16px;left:50%;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--bg);box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.tagcard .qrbox{width:100%;border:0}.tagcard b{display:block;text-align:center;margin-top:12px;font-family:var(--head);font-size:17px}
+@keyframes swing{0%{transform:rotate(-14deg)}25%{transform:rotate(9deg)}50%{transform:rotate(-5deg)}75%{transform:rotate(2deg)}100%{transform:rotate(0)}}
+.sec{font-size:22px;margin:8px 0 12px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:14px}
+.steps>div{padding:20px;border-left:1px solid var(--line)}.steps>div:first-child{border-left:0}
+.n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--surface);font-weight:700;font-size:14px}
+.steps p{margin:0}
+.split2{display:grid;grid-template-columns:1.1fr 1fr;gap:32px}
+.facts{list-style:none;margin:0;padding:0}.facts li{padding:12px 0;border-top:1px solid var(--line)}.facts li:first-child{border-top:0;padding-top:0}
+button.b.emg{border-radius:14px;letter-spacing:.01em}
+footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);color:var(--mute);font-size:13px}
+@media(max-width:720px){.hero,.split2,.steps{grid-template-columns:1fr}.steps>div{border-left:0;border-top:1px solid var(--line)}.steps>div:first-child{border-top:0}.tagcard{width:200px}}
+@media(prefers-reduced-motion:reduce){.tagcard{animation:none}*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand" data-act="role" data-v="home" tabindex="0" role="button" aria-label="TagBack Home"><span class="hole"></span>TagBack</div>
+  <div class="row" style="gap:8px;align-items:center">
+    <div class="seg" role="tablist" aria-label="Main Sections">
+      <button data-act="role" data-v="home" id="r-home" role="tab" aria-selected="false">Home</button>
+      <button data-act="role" data-v="owner" id="r-owner" role="tab" aria-selected="false">Owner</button>
+      <button data-act="role" data-v="finder" id="r-finder" role="tab" aria-selected="false">Finder</button>
+      <button data-act="role" data-v="place" id="r-place" role="tab" aria-selected="false">Community</button>
+    </div>
+    <button class="b alt" data-act="toggletheme" id="theme-btn" aria-label="Toggle dark mode" title="Toggle dark/light mode" style="padding:6px 12px;font-size:14px">🌓</button>
+  </div>
+</header>
+<main id="app"></main>
+<footer>TagBack is a private QR lost-and-found with community help. Finders never see your phone number, email or real name.</footer></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+"use strict";
+var KEY="tagback-v1";
+var S={owner:null,rooms:[],notes:[],blocked:[],g:{}};
+var ui={role:"home",tab:"requests",sel:null,fRoom:null,fMode:"landing",err:"",qrUrl:"",scanned:false,scanning:false,collapsed:{},replyTo:null,editTarget:null};
+function load(){try{var v=localStorage.getItem(KEY);return v?JSON.parse(v):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function rid(n){var a=new Uint8Array(n);crypto.getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,"0")}).join("")}
+async function sha(s){var b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b),function(x){return x.toString(16).padStart(2,"0")}).join("")}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function updateThemeUI(){
+  var cur=document.documentElement.getAttribute("data-theme")||(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  var btn=$("theme-btn");
+  if(btn){
+    btn.textContent=cur==="dark"?"☀️":"🌓";
+    btn.setAttribute("title",cur==="dark"?"Switch to light mode":"Switch to dark mode");
+  }
+}
+function initTheme(){
+  var saved=localStorage.getItem("tb-theme");
+  if(saved){document.documentElement.setAttribute("data-theme",saved)}
+  updateThemeUI();
+}
+function toggleTheme(){
+  var cur=document.documentElement.getAttribute("data-theme")||(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  var next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("tb-theme",next)}catch(e){}
+  updateThemeUI();
+}
+initTheme();
+function tm(t){return new Date(t).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
+function $(i){return document.getElementById(i)}
+function val(i){var e=$(i);return e?e.value.trim():""}
+function toast(t){var e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){e.hidden=true},2600)}
+function room(id){return S.rooms.find(function(r){return r.id===id})}
+function note(text,rid_){S.notes.unshift({id:rid(4),text:text,t:Date.now(),read:false,room:rid_||null})}
+var LIMIT_PRE=3, MAX_REQ=3, MAX_LEN=500;
+
+/* ---------- views ---------- */
+function render(){
+  $("r-home").className=ui.role==="home"?"on":"";$("r-owner").className=ui.role==="owner"?"on":"";$("r-finder").className=ui.role==="finder"?"on":"";$("r-place").className=ui.role==="place"?"on":"";
+  $("app").innerHTML=ui.role==="home"?homeView():ui.role==="owner"?ownerView():ui.role==="place"?placeAdminView():finderView();
+  if(ui.role==="owner"&&S.owner&&ui.tab==="qr")drawQR();
+  if(ui.role==="place"&&ui.aTab==="board")drawPlaceQR();
+  if(ui.role==="home")drawHeroQR();
+  var c=document.querySelector(".chat");if(c)c.scrollTop=c.scrollHeight;
+}
+function homeView(){
+ return '<section class="hero"><div><h1>Lost it? One scan brings it home.</h1><p class="lead">TagBack puts a private QR sticker on your belongings. Whoever finds them can reach you without ever seeing your phone number or email.</p><div class="row"><button class="b big" data-act="role" data-v="owner">Get my QR tag</button><button class="b alt big" data-act="role" data-v="finder">I found something</button></div></div>'+
+ '<div class="tagcard" aria-hidden="true"><div class="qrbox" id="heroqr"></div><b>Scan to open TagBack</b></div></section>'+
+ '<h2 class="sec">How it works</h2><div class="steps"><div><span class="n">1</span><h3>Stick it on</h3><p class="mute">Create an account, print your QR and put it on a bag, laptop or wallet.</p></div><div><span class="n">2</span><h3>Finder scans</h3><p class="mute">No app or account. They see your public note and a phrase that proves the sticker is real.</p></div><div><span class="n">3</span><h3>Chat privately</h3><p class="mute">You accept, reply and mark the item recovered. Block anyone at any time.</p></div></div>'+
+ '<div class="card split2"><div><h2>Private by design</h2><ul class="facts"><li><strong>Contact details stay hidden.</strong> Finders see only the name and note you choose.</li><li><strong>You approve first.</strong> Until you accept, a finder can send just 3 messages.</li><li><strong>Easy to switch off.</strong> Deactivate or regenerate a code if a sticker goes missing.</li></ul></div><div><h2>Community help at public places</h2><p>Scan a place QR, such as an auto stand, to message vehicle owners, drivers or helpers. AI only suggests a category; you confirm it.</p><p>Emergency messages use fixed rules, never wait on AI, and offer one-tap Call 112.</p><button class="b alt" data-act="role" data-v="place">Open community</button></div></div>';
+}
+function drawHeroQR(){var el=$("heroqr");if(!el)return;try{var q=qrcode(0,"M");q.addData(location.href.split("#")[0]);q.make();el.innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(e){el.style.display="none"}}
+function ownerView(){
+  if(!S.owner)return '<div class="card"><h1>Get your permanent QR tag</h1><p class="mute">Create an account to get one QR code you can stick on every belonging. Finders never see your phone or email.</p>'+
+   '<label for="o-name">Your name</label><input id="o-name" maxlength="40" placeholder="e.g. Aarav S.">'+
+   '<label for="o-email">Email (private, used only for alerts)</label><input id="o-email" type="email" placeholder="you@example.com">'+
+   '<p class="mute" style="margin-top:12px">Your email stays private and is never shown to finders.</p>'+
+   '<button class="b" data-act="register">Create account and QR</button><div class="err">'+esc(ui.err)+'</div></div><div class="card"><h2>Already have an account?</h2><label for="rk">Recovery key</label><input id="rk" placeholder="Paste your recovery key"><p style="margin-top:12px"><button class="b alt" data-act="signin">Sign in</button></p></div>';
+  var unread=S.notes.filter(function(n){return !n.read}).length;
+  var pend=S.rooms.filter(function(r){return r.status==="pending"}).length;
+  var tabs=[["requests","Requests"+(pend?'<span class="badge">'+pend+'</span>':"")],["active","Active"],["history","Closed & recovered"],["qr","My QR"],["notes","Notifications"+(unread?'<span class="badge">'+unread+'</span>':"")],["settings","Privacy"]];
+  var h='<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button data-act="tab" data-v="'+t[0]+'" class="'+(ui.tab===t[0]?"on":"")+'">'+t[1]+'</button>'}).join("")+'</div>';
+  if(ui.tab==="qr")h+=qrTab()+(ui.rec?recCard():"");else if(ui.tab==="notes")h+=notesTab();else if(ui.tab==="settings")h+=settingsTab();else h+=roomsTab();
+  return h;
+}
+function roomsTab(){
+  var sets={requests:["pending"],active:["active"],history:["closed","recovered","rejected"]}[ui.tab];
+  var list=S.rooms.filter(function(r){return sets.indexOf(r.status)>-1});
+  var left=list.length?list.map(function(r){var last=r.msgs[r.msgs.length-1];
+    return '<button class="item'+(ui.sel===r.id?" on":"")+'" data-act="sel" data-v="'+r.id+'"><div class="row" style="justify-content:space-between"><strong>'+esc(r.item)+'</strong><span class="pill '+r.status+'">'+r.status+'</span></div><div class="mute">'+esc(r.fname)+(last?" · "+esc(last.text.slice(0,40)):"")+'</div></button>'}).join(""):
+    '<div class="card mute">Nothing here yet. '+(ui.tab==="requests"?"Switch to Finder, scan the tag, and send a request.":"")+'</div>';
+  var r=room(ui.sel);var right=r&&list.indexOf(r)>-1?chatPanel(r,"owner"):'<div class="card mute">Select a conversation.</div>';
+  return '<div class="split"><div>'+left+'</div><div>'+right+'</div></div>';
+}
+function chatPanel(r,who){
+  var h='<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">'+esc(r.item)+'</h2><span class="pill '+r.status+'">'+r.status+'</span></div>';
+  if(who==="owner"){h+='<p class="mute">From '+esc(r.fname)+(r.loc?" · found at "+esc(r.loc):"")+(r.desc?" · "+esc(r.desc):"")+'</p>'}
+  h+='<div class="chat" aria-live="polite">'+r.msgs.map(function(m){
+    if(m.from==="sys")return '<div class="sys">'+esc(m.text)+'</div>';
+    var me=m.from===who;return '<div class="m'+(me?" me":"")+'"><small>'+(m.from==="owner"?"Owner":esc(r.fname))+' · '+tm(m.t)+'</small>'+esc(m.text)+'</div>'}).join("")+'</div>';
+  var open=r.status==="pending"||r.status==="active";
+  if(who==="owner"&&r.status==="pending")h+='<div class="row"><button class="b ok" data-act="accept" data-v="'+r.id+'">Accept and reply</button><button class="b bad" data-act="reject" data-v="'+r.id+'">Reject</button><button class="b bad" data-act="block" data-v="'+r.id+'">Block finder</button></div><p class="mute" style="margin-top:8px">You can read messages now. Accept to reply.</p>';
+  else if(open){
+    var pre=who==="finder"&&r.status==="pending";var used=r.msgs.filter(function(m){return m.from==="finder"}).length;
+    if(pre&&used>=LIMIT_PRE)h+='<p class="mute">You’ve sent '+LIMIT_PRE+' messages. Please wait for the owner to accept before sending more.</p>';
+    else h+='<div class="row"><input id="msg" maxlength="'+MAX_LEN+'" placeholder="'+(pre?"Message ("+(LIMIT_PRE-used)+" left until accepted)":"Type a message")+'" style="flex:1;min-width:160px"><button class="b" data-act="send" data-v="'+who+'|'+r.id+'">Send</button></div>';
+    if(who==="owner")h+='<div class="row" style="margin-top:10px"><button class="b ok" data-act="recover" data-v="'+r.id+'">Mark as recovered</button><button class="b alt" data-act="close" data-v="'+r.id+'">Close chat</button><button class="b bad" data-act="block" data-v="'+r.id+'">Block</button></div>';
+  }else h+='<p class="mute">This conversation is '+r.status+'. No further messages can be sent.</p>';
+  return h+'<div class="err">'+esc(ui.err)+'</div></div>';
+}
+function qrTab(){
+  var o=S.owner;
+  return '<div class="card"><h2>Your permanent QR</h2><div class="row" style="align-items:flex-start;gap:20px"><div><div class="qrbox" id="qr"></div></div><div style="flex:1;min-width:220px">'+
+  '<p>One code for every belonging. Print it and stick it on your bag, laptop, wallet.</p><p class="mute">Status: <strong>'+(o.qrActive?"Active":"Deactivated")+'</strong>. The code holds only a random ID, never personal data.</p>'+
+  '<div class="code">'+esc(ui.qrUrl)+'</div><div class="row" style="margin-top:12px"><button class="b" data-act="dl">Download SVG</button><button class="b alt" data-act="toggleqr">'+(o.qrActive?"Deactivate":"Reactivate")+'</button><button class="b alt" data-act="regen">Regenerate</button></div></div></div></div>';
+}
+function notesTab(){
+  return '<div class="card"><h2>Notifications</h2>'+(S.notes.length?S.notes.map(function(n){return '<div class="item" style="cursor:default"><div class="row" style="justify-content:space-between"><span>'+esc(n.text)+'</span><span class="mute">'+tm(n.t)+'</span></div></div>'}).join(""):'<p class="mute">No notifications yet. They’re created only when a finder submits the contact form, not when the QR is merely scanned.</p>')+
+  '<p class="mute">If you gave an email and the server has email set up, new requests and messages are also emailed to you.</p></div>';
+}
+function settingsTab(){
+  var p=S.owner.pub;
+  return '<div class="card"><h2>What finders can see</h2><label for="p-name">Public display name</label><input id="p-name" maxlength="40" value="'+esc(p.name)+'">'+
+  '<label for="p-note">Public note</label><textarea id="p-note" maxlength="200">'+esc(p.note)+'</textarea>'+
+  '<label for="p-ver">Verification phrase (shown on your landing page so fake stickers are spotted)</label><input id="p-ver" maxlength="40" value="'+esc(p.ver)+'">'+
+  '<p style="margin-top:12px"><button class="b" data-act="savepub">Save</button></p>'+
+  '<p class="mute">Your email and phone are never shown. Blocked finders: '+S.blocked.length+'.</p></div>'+recCard();
+}
+function recCard(){return '<div class="card"><h2>Recovery key</h2><p class="mute">Use it to sign in on another phone or after clearing your browser. It is shown once, so save it somewhere safe.</p>'+(ui.rec?'<div class="code">'+esc(ui.rec)+'</div>':'')+'<p style="margin-top:12px"><button class="b alt" data-act="newrec">'+(ui.rec?"Make a new key":"Show a new recovery key")+'</button></p></div>'}
+function finderView(){
+  if(ui.kind==="place"&&ui.scanned)return placeView();
+  if(!ui.scanned&&ui.fMode==="landing")return scanCard();
+  var p=ui.pub||{},r=ui.fRoomObj,live=r&&(r.status==="pending"||r.status==="active");
+  if(ui.fMode==="chat"&&r)return chatPanel(r,"finder")+'<div class="card"><h2>Your recovery code</h2><p class="mute">Save it to return to this chat from another browser.</p><div class="code">'+esc(RT)+'</div></div>';
+  if(ui.fMode==="recover")return '<div class="card"><h2>Reopen a conversation</h2><label for="rc">Recovery code</label><input id="rc" placeholder="Paste your code"><p style="margin-top:12px"><button class="b" data-act="dorecover">Reopen</button> <button class="b alt" data-act="fmode" data-v="landing">Back</button></p><div class="err">'+esc(ui.err)+'</div></div>';
+  if(ui.fMode==="form"&&!live)return '<div class="card"><h1>Tell '+esc(p.name)+' what you found</h1><p class="mute">No account needed. Your contact details stay private.</p>'+
+   '<label for="f-item">Found item *</label><input id="f-item" maxlength="60" placeholder="e.g. Black backpack">'+
+   '<label for="f-name">Your display name *</label><input id="f-name" maxlength="30" placeholder="e.g. Library helper">'+
+   '<label for="f-desc">Description</label><input id="f-desc" maxlength="150">'+
+   '<label for="f-loc">Where you found it</label><input id="f-loc" maxlength="100">'+
+   '<label for="f-msg">Message *</label><textarea id="f-msg" maxlength="'+MAX_LEN+'"></textarea>'+
+   '<p style="margin-top:12px"><button class="b" data-act="submit">Send to owner</button> <button class="b alt" data-act="fmode" data-v="landing">Back</button></p><div class="err">'+esc(ui.err)+'</div></div>';
+  return '<div class="card"><p class="mute">You scanned a tag. Does this match the sticker? Verification phrase:</p><h2>'+esc(p.ver||"(none set)")+'</h2></div>'+
+   '<div class="card"><h1>This belongs to '+esc(p.name)+'</h1><p>'+esc(p.note||"If you found something of mine, please get in touch. Thank you!")+'</p>'+
+   '<div class="row"><button class="b" data-act="contact">'+(live?"Open your conversation":"Contact owner")+'</button><button class="b alt" data-act="fmode" data-v="recover">I have a recovery code</button></div><div class="err">'+esc(ui.err)+'</div></div>';
+}
+function drawQR(){
+  var el=$("qr");if(!el)return;
+  try{var q=qrcode(0,"M");q.addData(ui.qrUrl);q.make();el.innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true});ui.svg=el.innerHTML}
+  catch(e){el.textContent="QR library unavailable"}
+}
+function setQrUrl(){var b=location.href.split("#")[0];ui.qrUrl=S.owner?b+"#tag-"+S.owner.qrId:""}
+
+/* ---------- PingME community layer ---------- */
+var CATS=["Blocked vehicle","Need a ride","Share a ride","Lost item","Other"];
+var NICK=lget("tb-nick")||(function(){var n="Guest-"+(100+Math.floor(Math.random()*900));lset("tb-nick",n);return n})(),PK=lget("tb-key"),seen={},first=true;
+var CU=null; // community user (from cookie session)
+var sseNotifs=null,ssePost=null,ssePostId=null,sseDeal=null,sseDealId=null;
+function initNotifSSE(){
+  if(typeof EventSource==="undefined"||sseNotifs||!CU)return;
+  try{
+    sseNotifs=new EventSource("/api/notifications/stream");
+    sseNotifs.addEventListener("unread_count",function(e){
+      try{var d=JSON.parse(e.data);ui.unreadNotifs=d.count;rerender()}catch(x){}
+    });
+    sseNotifs.addEventListener("notification",function(e){
+      try{
+        var d=JSON.parse(e.data);
+        ui.unreadNotifs=d.unreadCount;
+        toast("🔔 "+d.notification.title+": "+d.notification.body);
+        if(ui.cm&&ui.cm.v==="notifs")ui.cm.notifsData=null;
+        rerender();
+      }catch(x){}
+    });
+  }catch(e){}
+}
+function updateContextSSE(){
+  if(typeof EventSource==="undefined")return;
+  var c=ui.cm;
+  if(c&&c.v==="post"&&c.pid){
+    if(ssePostId!==c.pid){
+      if(ssePost)ssePost.close();
+      ssePostId=c.pid;
+      ssePost=new EventSource("/api/posts/"+c.pid+"/stream");
+      ssePost.addEventListener("comment",function(e){
+        try{
+          var cm=JSON.parse(e.data);
+          if(!c.post)return;
+          var exists=c.post.comments&&c.post.comments.some(function(x){return x.id===cm.id});
+          if(!exists){
+            api("GET","/api/posts/"+c.pid).then(function(up){
+              c.post=up;
+              toast("New reply from u/"+cm.nick);
+              rerender();
+            });
+          }
+        }catch(x){}
+      });
+    }
+  }else{
+    if(ssePost){ssePost.close();ssePost=null;ssePostId=null}
+  }
+  if(c&&c.v==="deal"&&c.dealId&&CU){
+    if(sseDealId!==c.dealId){
+      if(sseDeal)sseDeal.close();
+      sseDealId=c.dealId;
+      sseDeal=new EventSource("/api/deals/"+c.dealId+"/stream");
+      sseDeal.addEventListener("message",function(e){
+        try{
+          var msg=JSON.parse(e.data);
+          if(!c.deal||!c.deal.messages)return;
+          var exists=c.deal.messages.some(function(m){return m.id===msg.id});
+          if(!exists){
+            c.deal.messages.push(msg);
+            rerender();
+            setTimeout(function(){var el=$("deal-chatbox");if(el)el.scrollTop=el.scrollHeight},50);
+          }
+        }catch(x){}
+      });
+      sseDeal.addEventListener("status",function(e){
+        try{
+          var st=JSON.parse(e.data);
+          if(!c.deal)return;
+          c.deal.status=st.status;
+          c.deal.rating=st.rating;
+          c.deal.review=st.review;
+          rerender();
+        }catch(x){}
+      });
+    }
+  }else{
+    if(sseDeal){sseDeal.close();sseDeal=null;sseDealId=null}
+  }
+}
+async function checkCommunityAuth(){
+  try{
+    var d=await api("GET","/api/auth/me");
+    CU=d.user;NICK=CU.username;
+    try{var uc=await api("GET","/api/notifications/unread-count");ui.unreadNotifs=uc.count||0}catch(e){}
+    initNotifSSE();
+  }catch(e){
+    CU=null;
+    if(sseNotifs){sseNotifs.close();sseNotifs=null}
+  }
+}
+function needsAuth(){return !CU}
+function communityNick(){return CU?CU.username:NICK}
+function kapi(m,p,b){return api(m,p,b,{"x-key":PK||""})}
+function pid(){return ui.place?ui.place.id:"station"}
+function placeUrl(){return location.href.split("#")[0]+"#place-station"}
+function tags(c,u){return '<span class="pill'+(u==="emergency"||u==="high"?" pending":"")+'">'+esc(u)+'</span> <span class="pill">'+esc(c)+'</span>'}
+function call112(){return '<a class="call" href="tel:112">Call 112</a>'}
+function catBtns(act,cls){return CATS.map(function(c){return '<button class="b '+cls+'" data-act="'+act+'" data-v="'+c+'">'+c+'</button>'}).join("")}
+function placeView(){
+ var h='<h1>'+esc(ui.place.name)+'</h1><p class="mute">You are '+NICK+'. No phone numbers or names are shared.</p>';
+ h+='<div class="tabs"><button data-act="pset" data-v="msg" class="'+(ui.pTab!=="rides"?"on":"")+'">Message</button><button data-act="pset" data-v="rides" class="'+(ui.pTab==="rides"?"on":"")+'">Ride board</button></div>';
+ return h+(ui.pTab==="rides"?ridesPane():msgPane())+'<p><button class="b alt" data-act="rescan">Scan a different QR</button></p>';
+}
+function msgPane(){
+ var st=ui.pStep||"compose",p=ui.ping;
+ if(st==="sent"&&p)return '<div class="card"><h2>Message sent</h2><p class="mute">Sent to the '+esc(p.to.toLowerCase())+'. No names or numbers were shared.</p>'+tags(p.cat,p.urg)+(p.cat==="Emergency"?'<p><strong>Call 112 now.</strong> '+(p.alerted?"Responders have been emailed.":"Your message is in the responders’ inbox, but no alert channel is set up.")+'</p>':"")+(p.replies.length?p.replies.map(function(r){return '<div class="m">'+esc(r)+'</div>'}).join(""):'<p class="mute">Waiting for a reply…</p>')+(p.status==="closed"?'<p class="mute">Chat closed: issue solved.</p>':"")+'<p><button class="b" data-act="pstep" data-v="compose">Send another</button></p></div>'+call112();
+ if(st==="suggest"&&ui.sug)return '<div class="card"><h1>Looks like “'+esc(ui.sug.category)+'”. Is that right?</h1><p class="mute">'+(ui.sug.mode==="ai"?"AI only suggests. You decide.":"Quick guess (AI unavailable). You decide.")+'</p>'+(ui.sug.followup?'<p>'+esc(ui.sug.followup)+'</p>':"")+'<button class="b" data-act="psend" data-v="'+esc(ui.sug.category)+'">Yes, send</button><p class="mute" style="margin-top:12px">Or change it:</p><div class="row">'+catBtns("psend","alt")+'</div></div>'+call112();
+ if(st==="pick")return '<div class="card"><h1>Pick a category</h1><p class="mute">'+(ui.sug&&ui.sug.mode==="off"?"AI is off":"AI is slow or down")+': choose manually.</p><div class="row">'+catBtns("psend","")+'</div></div>'+call112();
+ return '<button class="b emg" data-act="psend" data-v="Emergency">Emergency: I need help now</button>'+call112()+'<div class="card"><textarea id="p-text" maxlength="300" placeholder="What’s happening? e.g. your car is blocking my gate"></textarea><div class="err">'+esc(ui.err)+'</div><p style="margin-top:10px"><button class="b" data-act="psuggest">'+(ui.busy?"Thinking…":"Suggest category")+'</button></p><p class="mute">Or tap a category directly:</p><div class="row">'+catBtns("psend","alt")+'</div></div><div class="card mute">Found something with a TagBack sticker? <button class="b alt" data-act="rescan">Scan that tag instead</button></div>';
+}
+function ridesPane(){
+ return (ui.rides||[]).map(function(r){var sp=Math.max(r.joined.length+1,2);
+ return '<div class="card"><h2>'+esc(r.from)+' → '+esc(r.to)+' · '+esc(r.time)+'</h2><p class="mute">Posted by '+esc(r.by)+'</p><p>Total ₹'+r.fare+'. <strong>₹'+Math.round(r.fare/sp)+' each</strong> for '+sp+' riders (mock, no payments).</p><p>'+(r.driver?esc(r.driver)+' is <strong>available</strong>':'<span class="mute">No driver yet</span>')+(r.joined.length?'<br>Joined: '+r.joined.map(esc).join(", "):"")+'</p><div class="row"><button class="b alt" data-act="rdrv" data-v="'+r.id+'">I’m available</button><button class="b" data-act="rjoin" data-v="'+r.id+'">Request to join</button></div></div>'}).join("")+
+ '<div class="card"><h2>Post a trip ahead</h2><div class="row"><input id="rf" placeholder="From" style="flex:1"><input id="rt" placeholder="To" style="flex:1"></div><p style="margin-top:10px"><button class="b" data-act="rpost">Post trip</button></p><div class="err">'+esc(ui.err)+'</div></div>';
+}
+function pingCard(p){
+ return '<div class="card">'+tags(p.cat,p.urg)+' <span class="mute">→ '+esc(p.to)+(p.rerouted?" (re-routed)":"")+' · confidence '+esc(p.conf)+'</span><p style="margin-top:8px">'+esc(p.polite)+'</p><details><summary class="mute">Show original</summary><p>'+esc(p.orig)+'</p></details>'+p.replies.map(function(r){return '<p class="mute">You: '+esc(r)+'</p>'}).join("")+
+ '<div class="row">'+["On my way, 5 min","Moving it now","Sorry, not mine"].map(function(q){return '<button class="b alt" data-act="arep" data-v="'+p.id+'|'+q+'">'+q+'</button>'}).join("")+'<button class="b alt" data-act="aop" data-v="'+p.id+'|reroute">Not for me</button><button class="b ok" data-act="aop" data-v="'+p.id+'|close">Mark solved</button><button class="b bad" data-act="aop" data-v="'+p.id+'|block">Block</button></div></div>';
+}
+function keyCard(){return '<div class="card"><h1>Community inbox</h1><p class="mute">For vehicle owners, drivers and helpers. Enter the responder key.</p><input id="k-in" placeholder="Responder key"><p style="margin-top:12px"><button class="b" data-act="pkey">Open</button></p><div class="err">'+(ui.badKey?"Wrong key.":"")+'</div></div>'}
+async function pollHelp(){
+ if(ui.role!=="place")return;
+ var t=ui.aTab||"help";
+ try{
+  if(t==="rides")ui.rides=await api("GET","/api/place/station/rides");
+  if(t!=="help")return;
+  var c=ui.cm=ui.cm||{v:"list"};
+  if(c.v==="search"){
+   if(c.searchQ&&!c.searchRes)c.searchRes=await api("GET","/api/search?q="+encodeURIComponent(c.searchQ));
+  }else if(c.v==="list"){
+   var q="/api/communities";
+   if(c.filter==="joined"&&CU)q="/api/communities/joined";
+   else if(c.commCity)q="/api/communities?city="+encodeURIComponent(c.commCity);
+   c.list=await api("GET",q);
+  }else if(c.v==="comm"){
+   if(!c.data){
+    var s=c.sort||"hot",tp=c.t||"all";
+    var q="/api/communities/"+c.name+"/posts?sort="+s+"&t="+tp;
+    if(c.filterType)q+="&type="+encodeURIComponent(c.filterType);
+    if(c.filterStatus)q+="&status="+encodeURIComponent(c.filterStatus);
+    if(c.filterCity)q+="&city="+encodeURIComponent(c.filterCity);
+    c.data=await api("GET",q);
+   }
+  }else if(c.v==="post"){
+   c.post=await api("GET","/api/posts/"+c.pid);
+  }else if(c.v==="deals"){
+   c.dealsList=await api("GET","/api/deals");
+  }else if(c.v==="deal"){
+   c.deal=await api("GET","/api/deals/"+c.dealId);
+  }else if(c.v==="notifs"){
+   c.notifsData=await api("GET","/api/notifications");
+   ui.unreadNotifs=c.notifsData.unreadCount||0;
+  }else if(c.v==="mod"){
+   var mt=c.modTab||"reports";
+   if(mt==="reports")c.reports=await api("GET","/api/communities/"+c.name+"/mod/reports");
+   else if(mt==="logs")c.modLogs=await api("GET","/api/communities/"+c.name+"/mod/logs");
+   else if(mt==="mods")c.modsData=await api("GET","/api/communities/"+c.name+"/moderators");
+  }
+ }catch(e){}
+}
+function trustBadge(t){
+ if(!t||!t.completedHelpCount)return "";
+ var star=(t.ratingCount&&t.ratingAverage!=null)?" ★"+Number(t.ratingAverage).toFixed(1):"";
+ return ' <span class="pill active" style="font-size:11px;padding:1px 6px" title="Trust: '+t.completedHelpCount+' help deals completed'+(t.ratingCount?', rating '+star:'')+'">'+t.completedHelpCount+' helped'+star+'</span>';
+}
+function postBadges(p){
+ var h="";
+ if(p.postType==="OFFER"){
+  h+='<span class="pill" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;font-weight:700">OFFER</span> ';
+ }else if(p.postType==="NEED"){
+  h+='<span class="pill" style="background:#fef3c7;color:#92400e;border-color:#fde68a;font-weight:700">NEED</span> ';
+ }
+ var st=p.status||"open";
+ if(st==="open"){
+  h+='<span class="pill active">Open</span> ';
+ }else if(st==="in_progress"){
+  h+='<span class="pill pending">In Progress</span> ';
+ }else if(st==="fulfilled"){
+  h+='<span class="pill" style="background:#dcfce7;color:#166534;border-color:#bbf7d0">Fulfilled ✓</span> ';
+ }else if(st==="expired"){
+  h+='<span class="pill mute">Expired</span> ';
+ }
+ return h;
+}
+function postMetaFields(p){
+ var fields=[];
+ if(p.budget)fields.push('💰 '+esc(p.budget));
+ if(p.targetTime)fields.push('🕒 '+esc(p.targetTime));
+ if(p.location)fields.push('📍 '+esc(p.location));
+ if(p.city)fields.push('🏙️ '+esc(p.city));
+ if(!fields.length)return '';
+ return '<div class="row mute" style="font-size:13px;gap:12px;margin:4px 0 2px">'+fields.join(' · ')+'</div>';
+}
+function renderCommentNode(c){
+ var isCollapsed=!!ui.collapsed[c.id];
+ var isMe=CU&&c.userId&&c.userId===CU.id;
+ var upCls=c.userVote===1?" v-up":"";
+ var downCls=c.userVote===-1?" v-down":"";
+ var h='<div class="c-node" id="cn-'+c.id+'">';
+ h+='<div class="c-meta">';
+ h+='<button class="c-act" data-act="c-collapse" data-v="'+c.id+'">'+(isCollapsed?'[+] Expand':'[-] Collapse')+'</button>';
+ h+='<strong>u/'+esc(c.nick)+'</strong>'+trustBadge(c.authorTrust)+' · '+tm(c.t);
+ if(!c.deleted){
+  h+='<span class="vbox"><button class="vbtn'+upCls+'" data-act="cvote" data-v="'+c.id+'|1">▲</button><span class="vscore">'+c.score+'</span><button class="vbtn'+downCls+'" data-act="cvote" data-v="'+c.id+'|-1">▼</button></span>';
+ }
+ h+='</div>';
+
+ if(!isCollapsed){
+  if(ui.editTarget&&ui.editTarget.type==="comment"&&ui.editTarget.id===c.id){
+   h+='<div style="margin:6px 0"><textarea id="cedit-'+c.id+'" maxlength="500">'+esc(c.text||c.body)+'</textarea><div class="row" style="margin-top:6px"><button class="b" data-act="csaveedit" data-v="'+c.id+'">Save</button><button class="b alt" data-act="ccanceledit">Cancel</button></div></div>';
+  }else{
+   h+='<div style="margin:4px 0;white-space:pre-wrap">'+esc(c.text||c.body)+'</div>';
+  }
+
+  h+='<div class="row" style="gap:10px;margin-bottom:6px">';
+  var isPostAuthor=ui.cm&&ui.cm.post&&CU&&ui.cm.post.userId===CU.id;
+  var canAcceptOffer=isPostAuthor&&!c.deleted&&c.userId&&c.userId!==CU.id&&ui.cm.post.status!=="fulfilled"&&ui.cm.post.status!=="expired";
+  if(canAcceptOffer){
+   h+='<button class="b ok" style="padding:2px 8px;font-size:12px" data-act="acceptoffer" data-v="'+c.userId+'|'+c.id+'">Accept Offer</button>';
+  }
+  if(CU&&!c.deleted){
+   h+='<button class="c-act" data-act="creply" data-v="'+c.id+'">Reply</button>';
+   if(!isMe){
+    h+='<button class="c-act" data-act="creport" data-v="'+c.id+'">Report</button>';
+   }
+  }
+  if(isMe&&!c.deleted){
+   h+='<button class="c-act" data-act="cedit" data-v="'+c.id+'">Edit</button>';
+   h+='<button class="c-act" data-act="cdelete" data-v="'+c.id+'">Delete</button>';
+  }
+  h+='</div>';
+
+  if(ui.replyTo===c.id){
+   h+='<div style="margin:8px 0;padding:8px;background:var(--bg);border-radius:8px"><div class="row"><input id="crep-'+c.id+'" maxlength="500" placeholder="Reply to u/'+esc(c.nick)+'" style="flex:1"><button class="b" data-act="csubmitrep" data-v="'+c.id+'">Reply</button><button class="b alt" data-act="ccancelrep">Cancel</button></div></div>';
+  }
+
+  if(c.replies&&c.replies.length){
+   h+=c.replies.map(renderCommentNode).join("");
+  }
+ }
+ h+='</div>';
+ return h;
+}
+function userBar(){
+  if(!CU){
+    return '<div class="card" style="background:color-mix(in srgb,var(--surface) 95%,transparent);border-color:var(--tag)">'+
+      '<div class="row" style="justify-content:space-between"><div><strong>Participate in community help</strong><div class="mute">Get an anonymous account to post needs or reply. No phone or email required.</div></div>'+
+      '<div class="row"><button class="b" data-act="u-anon">Get u/account</button><button class="b alt" data-act="u-showlogin">Sign in with recovery key</button></div></div>'+
+      (ui.showLogin?'<div style="margin-top:12px"><label for="u-rec">Recovery key</label><div class="row"><input id="u-rec" placeholder="Paste your recovery key" style="flex:1"><button class="b" data-act="u-login">Sign in</button><button class="b alt" data-act="u-hidelogin">Cancel</button></div></div>':'')+
+      '</div>';
+  }
+  var recInfo=ui.cRec?'<div style="margin-top:10px" class="code">Save your recovery key to sign in on other devices: <strong>'+esc(ui.cRec)+'</strong></div>':'';
+  var namePrompt=!CU.usernameChosen?'<div style="margin-top:10px" class="row"><input id="u-newname" placeholder="Choose permanent username (3-20 chars)" style="flex:1;max-width:260px"><button class="b" data-act="u-setname">Save username</button> <span class="mute">One-time choice</span></div>':'';
+  return '<div class="card" style="padding:14px 18px">'+
+    '<div class="row" style="justify-content:space-between"><div>Signed in as <strong>u/'+esc(CU.username)+'</strong>'+
+    (!CU.usernameChosen?' <span class="pill pending">Temporary</span>':' <span class="pill active">Verified</span>')+
+    '</div><div class="row" style="gap:8px">'+
+    '<button class="b '+(ui.unreadNotifs>0?'':'alt')+'" data-act="hnotifs">🔔 Notifications'+(ui.unreadNotifs>0?' <span class="badge" style="background:#ff4d4f;color:#fff;border-radius:999px;padding:1px 6px;font-size:11px">'+ui.unreadNotifs+'</span>':'')+'</button>'+
+    '<button class="b alt" data-act="hdeals">Private Deals</button>'+
+    '<button class="b alt" data-act="u-showrec">Recovery key</button>'+
+    '<button class="b alt" data-act="u-logout">Log out</button>'+
+    '</div></div>'+
+    recInfo+namePrompt+
+    '</div>';
+}
+function helpView(){
+ var c=ui.cm||{v:"list"},h="",err='<div class="err">'+esc(ui.err)+'</div>';
+ var ubar=userBar();
+ var searchBar='<div class="row" style="margin-bottom:12px"><input id="h-search" placeholder="Search communities and posts..." value="'+esc(c.searchQ||"")+'" style="flex:1"><button class="b alt" data-act="hsearch">Search</button></div>';
+
+ if(c.v==="notifs"){
+  var nd=c.notifsData||{notifications:[],unreadCount:0};
+  var notifs=nd.notifications||[];
+  return searchBar+'<p><button class="b alt" data-act="hback" data-v="list">← Back to communities</button></p>'+ubar+
+   '<div class="card">'+
+     '<div class="row" style="justify-content:space-between;align-items:center">'+
+       '<div><h1 style="margin:0 0 4px">Notifications</h1><p class="mute" style="margin:0">'+(nd.unreadCount||0)+' unread</p></div>'+
+       (notifs.length?'<button class="b alt" data-act="hnotifreadall">Mark all read</button>':'')+
+     '</div>'+
+   '</div>'+
+   (notifs.length?notifs.map(function(n){
+     var icon=n.type==="reply"?"💬":n.type==="accepted_offer"?"🤝":n.type==="deal_message"?"✉️":n.type==="deal_fulfilled"?"⭐":n.type==="mod_action"?"🛡️":"🔔";
+     var unreadStyle=!n.read?'border-left:4px solid var(--tag);background:color-mix(in srgb,var(--surface) 95%,var(--tag) 5%)':'';
+     return '<div class="item" style="cursor:pointer;'+unreadStyle+'" data-act="hopento-notif" data-v="'+n.id+'|'+esc(n.link||"")+'">'+
+       '<div class="row" style="justify-content:space-between">'+
+         '<strong>'+icon+' '+esc(n.title)+'</strong>'+
+         '<span class="mute" style="font-size:12px">'+tm(n.createdAt)+'</span>'+
+       '</div>'+
+       '<p style="margin:4px 0;font-size:14px">'+esc(n.body)+'</p>'+
+       (!n.read?'<span class="pill pending" style="font-size:11px">Unread</span>':'')+
+     '</div>';
+   }).join(""):'<div class="card mute">No notifications yet. You will receive updates for replies, accepted offers, messages, and moderation actions.</div>');
+ }
+
+ if(c.v==="search"){
+  var s=c.searchRes||{communities:[],posts:[]};
+  return searchBar+'<p><button class="b alt" data-act="hsearchback">← Back to communities</button></p>'+
+   '<h2>Search results for “'+esc(c.searchQ)+'”</h2>'+
+   '<h3>Communities ('+s.communities.length+')</h3>'+
+   (s.communities.length?s.communities.map(function(x){return '<button class="item" data-act="hcomm" data-v="'+esc(x.name)+'"><strong>c/'+esc(x.name)+'</strong>'+(x.city?' <span class="pill">🏙️ '+esc(x.city)+'</span>':'')+'<div class="mute">'+esc(x.desc||"")+' · '+x.members+' members · '+x.posts+' posts</div></button>'}).join(""):'<p class="mute">No matching communities.</p>')+
+   '<h3 style="margin-top:16px">Posts ('+s.posts.length+')</h3>'+
+   (s.posts.length?s.posts.map(function(p){return '<button class="item" data-act="hpost" data-v="'+p.id+'"><div class="row" style="gap:6px">'+postBadges(p)+'<strong>'+esc(p.title)+'</strong></div>'+postMetaFields(p)+'<div class="mute">in c/'+esc(p.comm)+' · u/'+esc(p.nick)+trustBadge(p.authorTrust)+' · '+p.score+' points · '+p.comments+' replies</div></button>'}).join(""):'<p class="mute">No matching posts.</p>');
+ }
+
+ if(c.v==="deals"){
+  var deals=c.dealsList||[];
+  return searchBar+'<p><button class="b alt" data-act="hback" data-v="list">← Back to communities</button></p>'+ubar+
+   '<div class="card"><div class="row" style="justify-content:space-between"><div><h1 style="margin:0 0 4px">Private Deals</h1><p class="mute" style="margin:0">Direct private chats between post authors and helpers</p></div></div></div>'+
+   (deals.length?deals.map(function(d){
+     var isMeAuthor=CU&&d.author_id===CU.id;
+     var otherNick=isMeAuthor?d.helper_nick:d.author_nick;
+     var roleLabel=isMeAuthor?"Helper: ":"Author: ";
+     var trust=isMeAuthor?{completedHelpCount:d.helper_completed_help,ratingAverage:d.helper_rating_avg,ratingCount:d.helper_rating_count}:{completedHelpCount:d.author_completed_help,ratingAverage:d.author_rating_avg,ratingCount:d.author_rating_count};
+     var stBadge=d.status==="fulfilled"?'<span class="pill" style="background:#dcfce7;color:#166534">Fulfilled ✓</span>':'<span class="pill active">Active</span>';
+     return '<div class="item" style="cursor:pointer" data-act="hopendeal" data-v="'+d.id+'">'+
+       '<div class="row" style="justify-content:space-between"><strong>Deal for: '+esc(d.post_title)+'</strong>'+stBadge+'</div>'+
+       '<div class="mute" style="margin:4px 0">'+roleLabel+'u/'+esc(otherNick)+trustBadge(trust)+' · updated '+tm(d.updated_at)+'</div>'+
+       (d.last_message?'<p style="margin:4px 0;font-size:13px;opacity:0.9">“'+esc(d.last_message)+'”</p>':'<p class="mute" style="margin:4px 0;font-size:13px">No messages yet. Tap to start chatting.</p>')+
+     '</div>';
+   }).join(""):'<div class="card mute">No private deals yet. Accept an offer on your post or have an author accept yours to begin.</div>');
+ }
+
+ if(c.v==="deal"){
+  var dl=c.deal;
+  if(!dl)return '<div class="card mute">Loading deal chat…</div>';
+  var isAuthor=CU&&dl.author_id===CU.id;
+  var otherNick=isAuthor?dl.helper_nick:dl.author_nick;
+  var otherRole=isAuthor?"Helper":"Author";
+  var otherTrust=isAuthor?dl.helper_trust:dl.author_trust;
+  var stPill=dl.status==="fulfilled"?'<span class="pill" style="background:#dcfce7;color:#166534;border-color:#bbf7d0">Fulfilled ✓</span>':'<span class="pill active">Active Deal</span>';
+
+  var fulfillCard='';
+  if(isAuthor&&dl.status!=="fulfilled"){
+   fulfillCard='<div class="card" style="border-left:4px solid var(--ok);margin-top:12px">'+
+     '<h3>Complete & Rate this Deal</h3>'+
+     '<p class="mute">Once the help is completed, mark it fulfilled and rate the helper.</p>'+
+     '<div class="row" style="gap:10px;margin-bottom:8px">'+
+       '<label for="deal-rating" style="margin:0">Rating: </label>'+
+       '<select id="deal-rating" style="padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)">'+
+         '<option value="5">★★★★★ (5 - Excellent)</option>'+
+         '<option value="4">★★★★☆ (4 - Good)</option>'+
+         '<option value="3">★★★☆☆ (3 - Okay)</option>'+
+         '<option value="2">★★☆☆☆ (2 - Poor)</option>'+
+         '<option value="1">★☆☆☆☆ (1 - Bad)</option>'+
+       '</select>'+
+     '</div>'+
+     '<textarea id="deal-review" placeholder="Optional brief review/note" style="margin-bottom:8px" rows="2"></textarea>'+
+     '<button class="b ok" data-act="hfulfilldeal">Mark Fulfilled & Rate Helper</button>'+
+   '</div>';
+  }else if(dl.status==="fulfilled"){
+   fulfillCard='<div class="card" style="background:var(--surface);border-left:4px solid var(--ok);margin-top:12px">'+
+     '<strong>Deal Fulfilled ✓</strong> · Rated '+(dl.rating?'★'+dl.rating+'/5':'Completed')+
+     (dl.review?'<p class="mute" style="margin:4px 0">“'+esc(dl.review)+'”</p>':'')+
+   '</div>';
+  }
+
+  var msgs=dl.messages||[];
+  return searchBar+'<p><button class="b alt" data-act="hdeals">← Back to Private Deals</button></p>'+ubar+
+   '<div class="card">'+
+     '<div class="row" style="justify-content:space-between;align-items:flex-start">'+
+       '<div>'+
+         '<h1 style="margin:0 0 4px;font-size:20px">Deal: '+esc(dl.post_title)+'</h1>'+
+         '<p class="mute" style="margin:0">'+otherRole+': <strong>u/'+esc(otherNick)+'</strong>'+trustBadge(otherTrust)+'</p>'+
+       '</div>'+
+       '<div>'+stPill+'</div>'+
+     '</div>'+
+     '<p class="mute" style="font-size:12px;margin:8px 0 0;padding:6px 10px;background:var(--bg);border-radius:8px">🔒 Private deal chat. Phone numbers and emails are never exposed publicly.</p>'+
+   '</div>'+
+   '<div class="card">'+
+     '<h2>Private Chat</h2>'+
+     '<div class="chat" id="deal-chatbox">'+
+       (msgs.length?msgs.map(function(m){
+         var isMe=CU&&m.sender_id===CU.id;
+         return '<div class="m '+(isMe?'me':'')+'">'+
+           '<small>'+(isMe?'You':'u/'+esc(m.sender_nick))+' · '+tm(m.created_at)+'</small>'+
+           '<div style="white-space:pre-wrap;word-break:break-word">'+esc(m.body)+'</div>'+
+         '</div>';
+       }).join(""):'<div class="sys">No messages yet. Send a message to coordinate details privately.</div>')+
+     '</div>'+
+     (dl.status!=="fulfilled"?'<div class="row" style="margin-top:10px">'+
+       '<input id="deal-msg" placeholder="Type a private message..." style="flex:1" maxlength="1000">'+
+       '<button class="b" data-act="hsenddealmsg">Send</button>'+
+     '</div>':'<p class="mute" style="margin-top:8px">This deal has been fulfilled.</p>')+
+   '</div>'+
+   fulfillCard+err;
+ }
+
+ if(c.v==="post"){
+  var p=c.post;if(!p)return '<div class="card mute">Loading…</div>';
+  var isPostAuthor=CU&&p.userId&&p.userId===CU.id;
+  var upCls=p.userVote===1?" v-up":"";
+  var downCls=p.userVote===-1?" v-down":"";
+
+  var postContent='';
+  if(ui.editTarget&&ui.editTarget.type==="post"&&ui.editTarget.id===p.id){
+   postContent='<div style="margin:10px 0"><input id="pedit-title-'+p.id+'" value="'+esc(p.title)+'" style="margin-bottom:8px"><textarea id="pedit-body-'+p.id+'">'+esc(p.body)+'</textarea><div class="row" style="margin-top:8px"><button class="b" data-act="psaveedit" data-v="'+p.id+'">Save</button><button class="b alt" data-act="pcanceledit">Cancel</button></div></div>';
+  }else{
+   postContent='<div class="row" style="gap:6px;margin-bottom:6px">'+postBadges(p)+'<h2 style="margin:0">'+esc(p.title)+'</h2></div>'+
+     postMetaFields(p)+
+     (p.imageUrl?'<div style="margin:12px 0"><img src="'+esc(p.imageUrl)+'" alt="Post image" style="max-height:480px;max-width:100%;border-radius:10px;border:1px solid var(--line);object-fit:contain"></div>':'')+
+     '<p class="mute">u/'+esc(p.nick)+trustBadge(p.authorTrust)+' · '+tm(p.t)+'</p><p style="white-space:pre-wrap">'+esc(p.body)+'</p>';
+  }
+
+  var postActions='';
+  if(!p.deleted){
+   var pbtns=[];
+   if(isPostAuthor){
+    pbtns.push('<button class="c-act" data-act="pedit" data-v="'+p.id+'">Edit</button>');
+    pbtns.push('<button class="c-act" data-act="pdelete" data-v="'+p.id+'">Delete</button>');
+    pbtns.push('<span style="opacity:0.4">|</span>');
+    pbtns.push('<button class="c-act" data-act="hpoststatus" data-v="open">Mark Open</button>');
+    pbtns.push('<button class="c-act" data-act="hpoststatus" data-v="in_progress">Mark In Progress</button>');
+    pbtns.push('<button class="c-act" data-act="hpoststatus" data-v="fulfilled">Mark Fulfilled</button>');
+   }else if(CU){
+    pbtns.push('<button class="c-act" data-act="preport" data-v="'+p.id+'">Report</button>');
+   }
+   if(pbtns.length)postActions='<div class="row" style="gap:10px;margin-top:8px">'+pbtns.join("")+'</div>';
+  }
+
+  return searchBar+'<p><button class="b alt" data-act="hback" data-v="comm">← c/'+esc(p.comm)+'</button></p>'+ubar+
+  '<div class="card">'+
+  '<div class="row" style="align-items:flex-start;gap:12px">'+
+   (!p.deleted?'<div class="vbox" style="flex-direction:column;padding:6px 8px"><button class="vbtn'+upCls+'" data-act="postvote" data-v="'+p.id+'|1">▲</button><span class="vscore">'+p.score+'</span><button class="vbtn'+downCls+'" data-act="postvote" data-v="'+p.id+'|-1">▼</button></div>':'')+
+   '<div style="flex:1">'+postContent+postActions+'</div>'+
+  '</div></div>'+
+  '<div class="card"><h2>'+p.comments.length+' repl'+(p.comments.length===1?"y":"ies")+'</h2>'+
+  (CU?'<div class="row" style="margin-bottom:12px"><input id="c-text" maxlength="500" placeholder="Offer or negotiate, e.g. I can do it for ₹800" style="flex:1;min-width:160px"><button class="b" data-act="ccomment">Reply</button></div>':'<p class="mute">Sign in above to reply to this post.</p>')+
+  '<div class="comment-list">'+(p.commentTree&&p.commentTree.length?p.commentTree.map(renderCommentNode).join(""):p.comments.map(renderCommentNode).join("")||'<div class="sys">No replies yet. Offer help or a price.</div>')+'</div>'+
+  err+'</div>';
+ }
+
+ if(c.v==="mod"){
+  var mt=c.modTab||"reports";
+  var mh=searchBar+'<p><button class="b alt" data-act="hcomm" data-v="'+esc(c.name)+'">← Back to c/'+esc(c.name)+'</button></p>'+ubar+
+   '<div class="card"><div class="row" style="justify-content:space-between"><div><h1 style="margin:0 0 4px">🛡️ Moderation: c/'+esc(c.name)+'</h1><p class="mute" style="margin:0">Manage reports, moderators, rules and safety</p></div></div></div>'+
+   '<div class="tabs" style="margin-bottom:12px">'+
+    '<button class="'+(mt==="reports"?"on":"")+'" data-act="mtab" data-v="reports">Mod Queue</button>'+
+    '<button class="'+(mt==="logs"?"on":"")+'" data-act="mtab" data-v="logs">Audit Logs</button>'+
+    '<button class="'+(mt==="mods"?"on":"")+'" data-act="mtab" data-v="mods">Moderators</button>'+
+    '<button class="'+(mt==="rules"?"on":"")+'" data-act="mtab" data-v="rules">Rules</button>'+
+   '</div>'+err;
+
+  if(mt==="reports"){
+   var reps=c.reports||[];
+   return mh+'<div class="card"><h2>Reported content ('+reps.length+')</h2>'+
+    (reps.length?reps.map(function(r){
+      var t=r.target;
+      return '<div class="item" style="cursor:default;margin-bottom:10px">'+
+       '<div class="row" style="justify-content:space-between"><strong>Report: '+esc(r.reason)+'</strong><span class="mute">by u/'+esc(r.reporterNick)+' · '+tm(r.createdAt)+'</span></div>'+
+       (t?'<div style="background:var(--bg);padding:8px;border-radius:6px;margin:6px 0;font-size:13px"><strong>'+(r.targetType==="post"?"Post: "+esc(t.title||""):"Comment:")+'</strong><p style="margin:4px 0">'+esc(t.body||"")+'</p><span class="mute">by u/'+esc(t.authorNick)+' '+(t.deleted?'(already deleted)':'')+'</span></div>':'<div class="mute">[Content no longer available]</div>')+
+       '<div class="row" style="gap:8px;margin-top:6px">'+
+        '<button class="b alt" data-act="m-dismiss" data-v="'+r.id+'">Dismiss</button>'+
+        (!t||!t.deleted?'<button class="b bad" data-act="m-remove" data-v="'+r.id+'">Remove content</button>':'')+
+        (t&&t.userId?'<button class="b bad" data-act="m-ban" data-v="'+t.userId+'">Ban author</button>':'')+
+       '</div></div>';
+    }).join(""):'<p class="mute">No pending reports in this community.</p>')+'</div>';
+  }
+
+  if(mt==="logs"){
+   var logs=c.modLogs||[];
+   return mh+'<div class="card"><h2>Mod Audit Logs ('+logs.length+')</h2>'+
+    (logs.length?logs.map(function(l){
+      return '<div class="item" style="cursor:default">'+
+       '<div class="row" style="justify-content:space-between"><strong>u/'+esc(l.moderator_nick||"Mod")+'</strong> · <span class="pill">'+esc(l.action)+'</span> <span class="mute">'+tm(l.created_at)+'</span></div>'+
+       (l.details?'<p class="mute" style="margin:4px 0">'+esc(l.details)+'</p>':'')+
+      '</div>';
+    }).join(""):'<p class="mute">No audit logs recorded yet.</p>')+'</div>';
+  }
+
+  if(mt==="mods"){
+   var md=c.modsData||{ownerUsername:"",moderators:[]};
+   return mh+'<div class="card"><h2>Owner</h2><p>u/<strong>'+esc(md.ownerUsername)+'</strong></p>'+
+    '<h2>Moderators ('+md.moderators.length+')</h2>'+
+    (md.moderators.length?md.moderators.map(function(m){
+      return '<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>u/'+esc(m.username)+' <span class="pill active">'+esc(m.role)+'</span></span>'+
+       (m.role!=="owner"?'<button class="b alt" data-act="m-delmod" data-v="'+esc(m.username)+'">Remove</button>':'')+
+      '</div>';
+    }).join(""):'<p class="mute">No moderators appointed yet.</p>')+
+    '<h3 style="margin-top:16px">Appoint a moderator</h3><div class="row"><input id="m-newmod" placeholder="Enter username"><button class="b" data-act="m-appoint">Appoint</button></div></div>';
+  }
+
+  if(mt==="rules"){
+   var curRules=c.data&&c.data.community?c.data.community.rules||"":"";
+   return mh+'<div class="card"><h2>Edit Community Rules</h2><p class="mute">These rules will be displayed at the top of the community page.</p><textarea id="m-rules-text" maxlength="1000" rows="6">'+esc(curRules)+'</textarea><p style="margin-top:10px"><button class="b" data-act="m-saverules">Save Rules</button></p></div>';
+  }
+ }
+
+ if(c.v==="comm"){
+  var d=c.data;if(!d)return '<div class="card mute">Loading…</div>';
+  var curSort=c.sort||"hot";
+  var curT=c.t||"all";
+  var curType=c.filterType||"all";
+  var curStatus=c.filterStatus||"all";
+  var newType=ui.newPostType||"NEED";
+  var isJoined=d.community&&d.community.joined;
+  var isMod=d.community&&(d.community.userRole==="owner"||d.community.userRole==="moderator");
+  var rulesCard=d.community&&d.community.rules?'<div class="card" style="border-left:4px solid var(--tag);padding:10px 14px"><strong style="font-size:13px">Rules of c/'+esc(d.community.name)+':</strong><p class="mute" style="white-space:pre-wrap;margin:4px 0 0;font-size:13px">'+esc(d.community.rules)+'</p></div>':'';
+  var emgBanner=ui.emgAlert?'<div class="card" style="background:#fff2f0;border:2px solid #ff4d4f"><h2 style="color:#cf1322;margin:0 0 6px">🚨 Emergency keyword detected</h2><p style="margin:0 0 10px">'+esc(ui.emgAlert)+'</p><div class="row"><a class="call" href="tel:112" style="display:inline-block">📞 Call 112</a> <button class="b alt" data-act="dismissemg">Dismiss</button></div></div>':'';
+
+  return searchBar+'<p><button class="b alt" data-act="hback" data-v="list">← All communities</button></p>'+ubar+
+  emgBanner+
+  '<div class="card"><div class="row" style="justify-content:space-between"><div><h1 style="margin:0 0 4px">c/'+esc(d.community.name)+'</h1><p class="mute" style="margin:0">'+esc(d.community.desc||"")+(d.community.city?' · 🏙️ '+esc(d.community.city):'')+' · '+(d.community.members||0)+' members'+(d.community.userRole?' · <span class="pill active">'+esc(d.community.userRole)+'</span>':'')+'</p></div>'+
+  '<div class="row" style="gap:8px">'+
+  (isMod?'<button class="b alt" data-act="hmodview" data-v="reports">🛡️ Mod Tools</button>':'')+
+  (CU?'<button class="b '+(isJoined?'alt':'')+'" data-act="hjoinleave" data-v="'+esc(d.community.name)+'">'+(isJoined?'Joined ✓':'+ Join')+'</button>':'')+
+  '</div></div></div>'+
+  rulesCard+
+  (CU?'<div class="card"><h2>Create a Post</h2>'+
+    '<div class="row" style="margin-bottom:10px;gap:8px">'+
+      '<span class="mute" style="font-size:13px">Type:</span>'+
+      '<button class="b '+(newType==="NEED"?"":"alt")+'" style="padding:5px 12px;font-size:13px" data-act="hsetposttype" data-v="NEED">NEED (Looking for help)</button>'+
+      '<button class="b '+(newType==="OFFER"?"":"alt")+'" style="padding:5px 12px;font-size:13px" data-act="hsetposttype" data-v="OFFER">OFFER (Offering service/help)</button>'+
+    '</div>'+
+    '<input id="n-title" maxlength="100" placeholder="'+(newType==="NEED"?"e.g. Need a cab to airport at 6 AM":"e.g. Offering airport cab rides, ₹800")+'">'+
+    '<label for="n-body">Details (optional)</label><textarea id="n-body" maxlength="500" placeholder="Describe the details, requirements or terms…"></textarea>'+
+    '<div class="row" style="margin-top:8px;gap:8px">'+
+      '<input id="n-budget" placeholder="Budget / Price (e.g. ₹500)" style="flex:1;min-width:140px">'+
+      '<input id="n-time" placeholder="Date & Time (e.g. Tomorrow 8 AM)" style="flex:1;min-width:140px">'+
+    '</div>'+
+    '<div class="row" style="margin-top:8px;gap:8px">'+
+      '<input id="n-loc" placeholder="Area / Landmark (e.g. Sector 18)" style="flex:1;min-width:140px">'+
+      '<input id="n-city" placeholder="City (e.g. Delhi)" style="flex:1;min-width:140px">'+
+    '</div>'+
+    '<div class="row" style="margin-top:8px;gap:8px;align-items:center">'+
+      '<button type="button" class="b alt" data-act="hpickimg" style="font-size:13px">📷 Attach Photo</button>'+
+      '<input id="n-imgfile" type="file" accept="image/jpeg,image/png,image/webp" style="display:none">'+
+      (ui.imgUploading?'<span class="mute" style="font-size:12px">Uploading…</span>':'')+
+      (ui.postImgUrl?'<span style="font-size:12px;color:var(--ok)">✓ Attached <button class="b alt" data-act="hclearimg" style="padding:1px 6px;font-size:11px">Remove</button></span>':'')+
+    '</div>'+
+    (ui.postImgUrl?'<div style="margin-top:8px"><img src="'+esc(ui.postImgUrl)+'" alt="Preview" style="max-height:120px;border-radius:8px;border:1px solid var(--line)"></div>':'')+
+    '<p style="margin-top:12px"><button class="b" data-act="hnewp">Post '+newType+' as u/'+esc(CU.username)+'</button></p>'+err+'</div>':'<div class="card mute">Sign in above to post in c/'+esc(d.community.name)+'.</div>')+
+  '<div class="row" style="justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">'+
+    '<div class="stabs">'+
+      '<button class="'+(curSort==="hot"?"on":"")+'" data-act="hsort" data-v="hot">Hot</button>'+
+      '<button class="'+(curSort==="new"?"on":"")+'" data-act="hsort" data-v="new">New</button>'+
+      '<button class="'+(curSort==="top"?"on":"")+'" data-act="hsort" data-v="top">Top</button>'+
+    '</div>'+
+    (curSort==="top"?'<div class="stabs">'+
+      '<button class="'+(curT==="day"?"on":"")+'" data-act="htime" data-v="day">Day</button>'+
+      '<button class="'+(curT==="week"?"on":"")+'" data-act="htime" data-v="week">Week</button>'+
+      '<button class="'+(curT==="all"?"on":"")+'" data-act="htime" data-v="all">All</button>'+
+    '</div>':'')+
+    '<div class="stabs">'+
+      '<button class="'+(curType==="all"?"on":"")+'" data-act="hfiltertype" data-v="all">All Types</button>'+
+      '<button class="'+(curType==="NEED"?"on":"")+'" data-act="hfiltertype" data-v="NEED">Needs</button>'+
+      '<button class="'+(curType==="OFFER"?"on":"")+'" data-act="hfiltertype" data-v="OFFER">Offers</button>'+
+    '</div>'+
+    '<div class="stabs">'+
+      '<button class="'+(curStatus==="all"?"on":"")+'" data-act="hfilterstatus" data-v="all">All Status</button>'+
+      '<button class="'+(curStatus==="open"?"on":"")+'" data-act="hfilterstatus" data-v="open">Open</button>'+
+      '<button class="'+(curStatus==="fulfilled"?"on":"")+'" data-act="hfilterstatus" data-v="fulfilled">Fulfilled</button>'+
+    '</div>'+
+  '</div>'+
+  '<div class="row" style="margin-bottom:12px;gap:8px">'+
+    '<input id="comm-post-city" placeholder="Filter feed by area/city..." value="'+esc(c.filterCity||"")+'" style="flex:1;max-width:240px">'+
+    '<button class="b alt" data-act="hfiltercity">Filter City</button>'+
+    (c.filterCity?'<button class="b alt" data-act="hfiltercityclear">Clear</button>':'')+
+  '</div>'+
+  (d.posts.length?d.posts.map(function(p){
+   var upCls=p.userVote===1?" v-up":"";
+   var downCls=p.userVote===-1?" v-down":"";
+   return '<div class="item" style="cursor:default"><div class="row" style="align-items:flex-start;gap:12px">'+
+    (!p.deleted?'<div class="vbox" style="flex-direction:column;padding:4px 6px"><button class="vbtn'+upCls+'" data-act="postvote" data-v="'+p.id+'|1">▲</button><span class="vscore">'+p.score+'</span><button class="vbtn'+downCls+'" data-act="postvote" data-v="'+p.id+'|-1">▼</button></div>':'')+
+    '<div style="flex:1;cursor:pointer" data-act="hpost" data-v="'+p.id+'">'+
+      '<div class="row" style="gap:6px">'+postBadges(p)+'<strong>'+esc(p.title)+'</strong></div>'+
+      postMetaFields(p)+
+      (p.imageUrl?'<div style="margin:8px 0"><img src="'+esc(p.imageUrl)+'" alt="Post image" style="max-height:200px;max-width:100%;border-radius:8px;object-fit:cover;border:1px solid var(--line)"></div>':'')+
+      '<div class="mute">u/'+esc(p.nick)+trustBadge(p.authorTrust)+' · '+tm(p.t)+' · '+p.comments+' repl'+(p.comments===1?"y":"ies")+'</div>'+
+    '</div>'+
+   '</div></div>';
+  }).join(""):'<div class="card mute" style="text-align:center;padding:28px 16px"><div style="font-size:28px;margin-bottom:6px">📭</div>No posts matching current filters. Be the first to post!</div>')+
+  (d.pagination&&d.pagination.hasMore&&d.pagination.nextCursor?'<p style="text-align:center"><button class="b alt" data-act="hloadmore" data-v="'+esc(d.pagination.nextCursor)+'">Load more posts</button></p>':'');
+ }
+
+ var l=c.list;if(!l)return '<div class="card mute">Loading…</div>';
+ var curFilter=c.filter||"all";
+ return searchBar+'<h1>Community help</h1><p class="mute">Join a community, post what you need, and others reply to offer help or negotiate.</p>'+ubar+
+ '<div class="tabs" style="margin-bottom:12px">'+
+  '<button class="'+(curFilter!=="joined"?"on":"")+'" data-act="hfilter" data-v="all">All communities</button>'+
+  (CU?'<button class="'+(curFilter==="joined"?"on":"")+'" data-act="hfilter" data-v="joined">My communities</button>':'')+
+ '</div>'+
+ '<div class="row" style="margin-bottom:12px;gap:8px">'+
+  '<input id="cm-city-filter" placeholder="Filter communities by city (e.g. Delhi)..." value="'+esc(c.commCity||"")+'" style="flex:1;max-width:280px">'+
+  '<button class="b alt" data-act="hcommcity">Filter</button>'+
+  (c.commCity?'<button class="b alt" data-act="hcommcityclear">Clear</button>':'')+
+ '</div>'+
+ (CU?'<div class="card"><h2>Create a community</h2><input id="cm-name" maxlength="30" placeholder="e.g. cabs_city or hotels_city"><label for="cm-desc">What is it for?</label><input id="cm-desc" maxlength="150" placeholder="Short description"><label for="cm-city">City / Region (optional)</label><input id="cm-city" maxlength="50" placeholder="e.g. Delhi, Mumbai, Bangalore"><p style="margin-top:12px"><button class="b" data-act="hnewc">Create</button></p>'+err+'</div>':'')+
+ (l.length?l.map(function(x){return '<button class="item" data-act="hcomm" data-v="'+esc(x.name)+'"><div class="row" style="justify-content:space-between"><div><strong>c/'+esc(x.name)+'</strong>'+(x.city?' <span class="pill">🏙️ '+esc(x.city)+'</span>':'')+'</div>'+(x.joined?'<span class="pill active">Joined</span>':'')+'</div><div class="mute">'+esc(x.desc||"")+' · '+(x.members||0)+' members · '+x.posts+' post'+(x.posts===1?"":"s")+'</div></button>'}).join(""):'<div class="card mute" style="text-align:center;padding:32px 16px"><div style="font-size:32px;margin-bottom:8px">📭</div>'+(curFilter==="joined"?"You haven’t joined any communities yet. Join one below!":"No communities found.")+'</div>');
+}
+function placeAdminView(){
+ var t=ui.aTab||"help",h='<div class="tabs">'+[["help","Community help"],["inbox","Inbox"],["rides","Ride board"],["board","QR board & AI"]].map(function(x){return '<button data-act="atab" data-v="'+x[0]+'" class="'+(t===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("")+'</div>';
+ if(t==="help")return h+helpView();
+ if(t==="rides")return h+ridesPane();
+ if(!PK)return h+keyCard();
+ var a=ui.adm;if(!a)return h+'<div class="card mute">Loading…</div>';
+ if(t==="board")return h+'<div class="card"><h2>AI is '+(a.ai?"ON":"OFF")+'</h2><p class="mute">'+(a.ai?(a.keyset?"Claude is connected for suggestions ("+a.aiUsed+"/"+a.aiCap+" used today).":"No ANTHROPIC_API_KEY set: a simple built-in classifier stands in."):"The select list alone routes messages.")+' Emergency keyword rules never use AI.</p><button class="b" data-act="aai">Switch AI '+(a.ai?"OFF":"ON")+'</button></div><div class="card"><h2>QR board for '+esc(a.place)+'</h2><div class="qrbox" id="qr"></div><div class="code" style="margin-top:10px">'+esc(placeUrl())+'</div></div>';
+ var l=a.pings.filter(function(p){return p.status!=="closed"});
+ return h+(l.length?l.map(pingCard).join(""):'<div class="card mute">No open messages.</div>');
+}
+function drawPlaceQR(){var el=$("qr");if(!el)return;try{var q=qrcode(0,"M");q.addData(placeUrl());q.make();el.innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(e){el.textContent="QR library unavailable"}}
+
+/* ---------- finder scanning ---------- */
+var cam=null,camStop=false;
+function scanCard(){
+ return '<div class="card"><h1>Scan the QR tag</h1><p class="mute">Point your camera at the QR sticker on the item you found. No account needed.</p>'+
+ (ui.scanning?'<video id="cam" playsinline muted style="width:100%;max-height:320px;border-radius:12px;background:#000;object-fit:cover"></video><p style="margin-top:10px"><button class="b alt" data-act="stopscan">Stop camera</button></p>':
+ '<div class="row"><button class="b" data-act="startscan">Open camera</button><button class="b alt" data-act="pick">Take or upload photo</button><input id="qrfile" type="file" accept="image/*" capture="environment" hidden></div>')+
+ '<label for="qrtext">Or paste the tag link or code</label><div class="row"><input id="qrtext" placeholder="Link ending in #tag-…" style="flex:1;min-width:160px"><button class="b alt" data-act="usecode">Use code</button></div>'+
+ '<div class="err">'+esc(ui.err)+'</div></div>';
+}
+function stopCam(){camStop=true;if(cam){cam.getTracks().forEach(function(t){t.stop()});cam=null}}
+function jsq(src,w,h){if(typeof jsQR==="undefined")return null;var c=document.createElement("canvas");c.width=w;c.height=h;var x=c.getContext("2d",{willReadFrequently:true});x.drawImage(src,0,0,w,h);var d=x.getImageData(0,0,w,h);var q=jsQR(d.data,w,h);return q?q.data:null}
+function decodeSource(src,w,h){
+ if("BarcodeDetector" in window){try{return new BarcodeDetector({formats:["qr_code"]}).detect(src).then(function(r){return r[0]?r[0].rawValue:null}).catch(function(){return jsq(src,w,h)})}catch(e){}}
+ return Promise.resolve(jsq(src,w,h));
+}
+async function startCam(){
+ camStop=false;
+ try{cam=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})}
+ catch(e){ui.scanning=false;ui.err="Camera isn’t available here (blocked or no camera). Use the photo option or paste the code.";render();return}
+ var v=$("cam");if(!v){stopCam();return}
+ v.srcObject=cam;try{await v.play()}catch(e){}
+ (async function loop(){
+  if(camStop)return;
+  if(v.videoWidth){var s=Math.min(1,800/v.videoWidth);var t=await decodeSource(v,Math.round(v.videoWidth*s),Math.round(v.videoHeight*s));if(t&&!camStop){handleScan(t);return}}
+  setTimeout(loop,250);
+ })();
+}
+async function handleScan(text){
+ stopCam();ui.scanning=false;
+ var pm=String(text).match(/place-([a-z0-9-]+)/i);
+ if(pm){try{ui.place=await api("GET","/api/place/"+pm[1].toLowerCase());ui.kind="place";ui.scanned=true;ui.pStep="compose";ui.err="";toast("Place recognised")}catch(e){ui.err="Unknown place QR."}return refresh(true)}
+ var m=String(text).match(/tag-([0-9a-f]{20})/i)||String(text).match(/^([0-9a-f]{20})$/i);
+ if(!m){ui.err="That isn’t a TagBack QR code.";return refresh(true)}
+ try{ui.kind="tag";ui.tagId=m[1].toLowerCase();ui.pub=await api("GET","/api/tag/"+ui.tagId);ui.scanned=true;ui.err="";toast("Tag recognised")}
+ catch(e){ui.err=e.status===410?"This tag is inactive. The owner has turned it off.":"This tag isn’t valid. The owner may have replaced it."}
+ refresh(true);
+}
+document.addEventListener("change",async function(e){
+ if(e.target.id==="n-imgfile"&&e.target.files&&e.target.files[0]){
+  var file=e.target.files[0];
+  if(file.size>2*1024*1024){ui.err="Image exceeds 2MB limit.";rerender();return}
+  ui.imgUploading=true;ui.err="";rerender();
+  try{
+   var ab=await file.arrayBuffer();
+   var r=await fetch("/api/upload",{
+    method:"POST",
+    credentials:"same-origin",
+    headers:{"Content-Type":file.type||"application/octet-stream"},
+    body:ab
+   });
+   var res=await r.json();
+   if(!r.ok)throw new Error(res.error||"Upload failed");
+   ui.postImgUrl=res.url;
+   toast("Image attached");
+  }catch(err){
+   ui.err="Failed to upload image: "+err.message;
+  }finally{
+   ui.imgUploading=false;
+   rerender();
+  }
+  return;
+ }
+ if(e.target.id!=="qrfile"||!e.target.files[0])return;
+ try{var bmp=await createImageBitmap(e.target.files[0]);var s=Math.min(1,1000/Math.max(bmp.width,bmp.height));var t=await decodeSource(bmp,Math.round(bmp.width*s),Math.round(bmp.height*s));
+  if(t)handleScan(t);else{ui.err="No QR code found in that photo. Move closer and use good light.";render()}}
+ catch(err){ui.err="Couldn’t read that image.";render()}
+});
+
+/* ---------- network ---------- */
+function lget(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lset(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+var OT=lget("tb-owner"),RT=lget("tb-room"),last="";
+async function api(m,p,b,h){
+  var r=await fetch(p,{method:m,credentials:"same-origin",headers:Object.assign({"Content-Type":"application/json"},h||{}),body:b?JSON.stringify(b):undefined});
+  var d={};try{d=await r.json()}catch(e){}
+  if(!r.ok){var er=new Error(d.error||"Something went wrong.");er.status=r.status;throw er}
+  return d;
+}
+function oapi(m,p,b){return api(m,p,b,{"x-owner":OT||""})}
+function rerender(){var a=document.activeElement,id=a&&a.id,v=a&&a.value,s=a&&a.selectionStart;render();
+  if(id){var e=$(id);if(e&&v!=null){e.value=v;e.focus();try{e.setSelectionRange(s,s)}catch(x){}}}}
+async function refresh(force){
+  if(OT){try{var d=await oapi("GET","/api/me");S.owner=d.owner;S.rooms=d.rooms;S.notes=d.notes;S.blocked=new Array(d.blocked);setQrUrl()}
+    catch(e){if(e.status===401){OT=null;lset("tb-owner",null);S.owner=null}}}
+  if(RT){try{ui.fRoomObj=await api("GET","/api/room",null,{"x-room":RT})}
+    catch(e){if(e.status===404){RT=null;lset("tb-room",null);ui.fRoomObj=null;if(ui.fMode==="chat"){ui.fMode="landing";ui.err="This conversation has ended."}}}}
+  try{
+    if(ui.kind==="place"&&ui.scanned){ui.rides=await api("GET","/api/place/"+ui.place.id+"/rides");if(ui.pingId)ui.ping=await api("GET","/api/ping/"+ui.pingId)}
+    if(ui.role==="place"&&PK){var ad=await kapi("GET","/api/admin/state");ui.adm=ad;ui.rides=ad.rides;ui.badKey=false;
+      ad.pings.forEach(function(p){if(!seen[p.id]){seen[p.id]=1;if(!first&&p.cat==="Emergency")toast("New EMERGENCY at "+ad.place)}});first=false}
+  }catch(e){if(ui.role==="place"&&e.status===401){ui.badKey=true;PK=null;lset("tb-key",null)}}
+  if(!ui.authChecked||ui.role==="place"){ui.authChecked=true;await checkCommunityAuth();}
+  await pollHelp();
+  updateContextSSE();
+  var snap=JSON.stringify([ui.cm,S,ui.fRoomObj,ui.role,ui.fMode,ui.err,ui.scanned,ui.scanning,ui.rides,ui.ping,ui.adm,ui.pStep,ui.sug,ui.busy,ui.pTab,ui.aTab,ui.badKey,ui.unreadNotifs]);
+  if(force||snap!==last){last=snap;rerender()}
+}
+async function act(a,v){
+  ui.err="";if(a!=="startscan")stopCam();
+  try{switch(a){
+  case "role":ui.role=v;ui.scanning=false;break;
+  case "tab":ui.tab=v;ui.sel=null;if(v==="notes")await oapi("POST","/api/me/notes/read");break;
+  case "sel":ui.sel=v;break;
+  case "register":{var n=val("o-name");if(!n){ui.err="Enter your name.";break}
+    var d=await api("POST","/api/register",{name:n,email:val("o-email")});OT=d.ownerToken;lset("tb-owner",OT);ui.rec=d.recovery;ui.tab="qr";break}
+  case "signin":{var rk=val("rk");if(!rk){ui.err="Paste your recovery key.";break}var sd=await api("POST","/api/login",{recovery:rk});OT=sd.ownerToken;lset("tb-owner",OT);ui.tab="requests";break}
+  case "newrec":{var nr=await oapi("POST","/api/me/recovery");ui.rec=nr.recovery;break}
+  case "savepub":await oapi("POST","/api/me/pub",{name:val("p-name"),note:val("p-note"),ver:val("p-ver")});toast("Saved");break;
+  case "toggleqr":await oapi("POST","/api/me/qr",{op:"toggle"});break;
+  case "regen":await oapi("POST","/api/me/qr",{op:"regen"});toast("New QR generated. Reprint it; the old one no longer works.");break;
+  case "dl":try{var blob=new Blob(['<?xml version="1.0"?>'+ui.svg.replace("<svg",'<svg xmlns="http://www.w3.org/2000/svg"')],{type:"image/svg+xml"});var u=URL.createObjectURL(blob);var l=document.createElement("a");l.href=u;l.download="tagback-qr.svg";document.body.appendChild(l);l.click();l.remove();toast("Downloading QR")}catch(e){toast("Download unavailable here")}return;
+  case "psuggest":{var tx=val("p-text");if(!tx){ui.err="Type a message first.";break}
+    ui.draft=tx;ui.busy=true;rerender();
+    try{ui.sug=await api("POST","/api/place/"+pid()+"/suggest",{text:tx})}catch(e){ui.sug={mode:"down"}}
+    ui.busy=false;if(ui.sug.mode==="rules")return act("psend","Emergency");
+    ui.pStep=ui.sug.category?"suggest":"pick";break}
+  case "psend":{var ptx=val("p-text")||ui.draft||(v==="Emergency"?"Emergency, no details":"");if(!ptx){ui.err="Type a message first.";break}
+    var pg=await api("POST","/api/place/"+pid()+"/ping",{text:ptx,cat:v,nick:NICK,ai:ui.sug&&ui.sug.category?ui.sug:null});
+    ui.pingId=pg.id;ui.ping=pg;ui.pStep="sent";ui.draft="";ui.sug=null;break}
+  case "pstep":ui.pStep=v;ui.err="";break;
+  case "pset":ui.pTab=v;break;
+  case "rescan":ui.scanned=false;ui.kind=null;ui.place=null;ui.fMode="landing";ui.pingId=null;ui.ping=null;ui.pStep="compose";break;
+  case "rdrv":await api("POST","/api/rides/"+v+"/driver",{nick:NICK});break;
+  case "rjoin":await api("POST","/api/rides/"+v+"/join",{nick:NICK});break;
+  case "rpost":{var f1=val("rf"),t1=val("rt");if(!f1||!t1){ui.err="Enter from and to.";break}await api("POST","/api/place/"+pid()+"/rides",{from:f1,to:t1,nick:NICK});break}
+  case "hcomm":ui.cm={v:"comm",name:v};break;
+  case "hpost":ui.cm={v:"post",name:ui.cm.name,pid:v};break;
+  case "hback":ui.cm=v==="list"?{v:"list"}:{v:"comm",name:ui.cm.name};break;
+  case "hsearch":{var sq=val("h-search");if(sq){ui.cm={v:"search",searchQ:sq}}break}
+  case "hsearchback":ui.cm={v:"list"};break;
+  case "hfilter":ui.cm.filter=v;break;
+  case "hsort":ui.cm.sort=v;ui.cm.data=null;break;
+  case "htime":ui.cm.t=v;ui.cm.data=null;break;
+  case "hloadmore":{
+    if(ui.cm&&ui.cm.data&&v){
+      var curPosts=ui.cm.data.posts||[];
+      var s=ui.cm.sort||"hot",tp=ui.cm.t||"all";
+      var more=await api("GET","/api/communities/"+ui.cm.name+"/posts?sort="+s+"&t="+tp+"&cursor="+encodeURIComponent(v));
+      ui.cm.data.posts=curPosts.concat(more.posts||[]);
+      ui.cm.data.pagination=more.pagination;
+    }
+    break}
+  case "hjoinleave":{
+    if(!CU){ui.err="Sign in to join communities.";break}
+    var curJoined=ui.cm.data&&ui.cm.data.community&&ui.cm.data.community.joined;
+    var ep=curJoined?"/leave":"/join";
+    await api("POST","/api/communities/"+v+ep);
+    if(ui.cm.data&&ui.cm.data.community){
+      ui.cm.data.community.joined=!curJoined;
+      ui.cm.data.community.members=Math.max(0,(ui.cm.data.community.members||0)+(curJoined?-1:1));
+    }
+    toast(curJoined?"Left c/"+v:"Joined c/"+v);
+    break}
+  case "postvote":{
+    if(!CU){ui.err="Sign in to vote.";break}
+    var pts=v.split("|"),pId=pts[0],dir=parseInt(pts[1],10);
+    var vres=await api("POST","/api/posts/"+pId+"/vote",{direction:dir});
+    if(ui.cm.post&&ui.cm.post.id===pId){
+      ui.cm.post.score=vres.score;
+      ui.cm.post.userVote=vres.userVote;
+    }
+    if(ui.cm.data&&ui.cm.data.posts){
+      var pObj=ui.cm.data.posts.find(function(x){return x.id===pId});
+      if(pObj){pObj.score=vres.score;pObj.userVote=vres.userVote}
+    }
+    break}
+  case "cvote":{
+    if(!CU){ui.err="Sign in to vote.";break}
+    var cts=v.split("|"),cId=cts[0],cdir=parseInt(cts[1],10);
+    var cvres=await api("POST","/api/comments/"+cId+"/vote",{direction:cdir});
+    function updC(list){
+      if(!list)return;
+      for(var i=0;i<list.length;i++){
+        if(list[i].id===cId){list[i].score=cvres.score;list[i].userVote=cvres.userVote;return true}
+        if(list[i].replies&&updC(list[i].replies))return true;
+      }
+    }
+    if(ui.cm.post){
+      updC(ui.cm.post.comments);
+      updC(ui.cm.post.commentTree);
+    }
+    break}
+  case "c-collapse":ui.collapsed[v]=!ui.collapsed[v];break;
+  case "creply":ui.replyTo=(ui.replyTo===v?null:v);break;
+  case "ccancelrep":ui.replyTo=null;break;
+  case "csubmitrep":{
+    if(!CU){ui.err="Sign in to reply.";break}
+    var rtx=val("crep-"+v);if(!rtx)break;
+    await api("POST","/api/posts/"+ui.cm.pid+"/comments",{text:rtx,parent_id:v});
+    ui.replyTo=null;
+    break}
+  case "pedit":ui.editTarget={type:"post",id:v};break;
+  case "pcanceledit":ui.editTarget=null;break;
+  case "psaveedit":{
+    var etit=val("pedit-title-"+v),ebod=val("pedit-body-"+v);
+    var epres=await api("PUT","/api/posts/"+v,{title:etit,body:ebod});
+    if(ui.cm.post&&ui.cm.post.id===v){
+      ui.cm.post.title=epres.title;
+      ui.cm.post.body=epres.body;
+      ui.cm.post.edited_at=epres.edited_at;
+    }
+    ui.editTarget=null;
+    toast("Post updated");
+    break}
+  case "pdelete":{
+    if(!confirm("Delete this post?"))break;
+    await api("DELETE","/api/posts/"+v);
+    if(ui.cm.post&&ui.cm.post.id===v){
+      ui.cm.post.title="[deleted]";
+      ui.cm.post.body="[deleted]";
+      ui.cm.post.deleted=1;
+    }
+    toast("Post deleted");
+    break}
+  case "cedit":ui.editTarget={type:"comment",id:v};break;
+  case "ccanceledit":ui.editTarget=null;break;
+  case "csaveedit":{
+    var ect=val("cedit-"+v);
+    var ecres=await api("PUT","/api/comments/"+v,{text:ect});
+    function updCText(list){
+      if(!list)return;
+      for(var i=0;i<list.length;i++){
+        if(list[i].id===v){list[i].text=list[i].body=ecres.text;list[i].edited_at=ecres.edited_at;return true}
+        if(list[i].replies&&updCText(list[i].replies))return true;
+      }
+    }
+    if(ui.cm.post){
+      updCText(ui.cm.post.comments);
+      updCText(ui.cm.post.commentTree);
+    }
+    ui.editTarget=null;
+    toast("Comment updated");
+    break}
+  case "cdelete":{
+    if(!confirm("Delete this comment?"))break;
+    await api("DELETE","/api/comments/"+v);
+    function markCDel(list){
+      if(!list)return;
+      for(var i=0;i<list.length;i++){
+        if(list[i].id===v){list[i].text=list[i].body="[deleted]";list[i].deleted=1;return true}
+        if(list[i].replies&&markCDel(list[i].replies))return true;
+      }
+    }
+    if(ui.cm.post){
+      markCDel(ui.cm.post.comments);
+      markCDel(ui.cm.post.commentTree);
+    }
+    toast("Comment deleted");
+    break}
+  case "preport":{
+    if(!CU){ui.err="Sign in to report.";break}
+    var reason=prompt("Why are you reporting this post?");
+    if(!reason)break;
+    await api("POST","/api/reports",{targetType:"post",targetId:v,reason:reason});
+    toast("Report submitted to moderators.");
+    break}
+  case "creport":{
+    if(!CU){ui.err="Sign in to report.";break}
+    var reason=prompt("Why are you reporting this comment?");
+    if(!reason)break;
+    await api("POST","/api/reports",{targetType:"comment",targetId:v,reason:reason});
+    toast("Report submitted to moderators.");
+    break}
+  case "hmodview":ui.cm={v:"mod",name:ui.cm.name,modTab:v||"reports"};break;
+  case "mtab":ui.cm.modTab=v;break;
+  case "m-dismiss":{
+    await api("POST","/api/communities/"+ui.cm.name+"/mod/reports/"+v+"/dismiss");
+    ui.cm.reports=(ui.cm.reports||[]).filter(function(r){return r.id!==v});
+    toast("Report dismissed.");
+    break}
+  case "m-remove":{
+    await api("POST","/api/communities/"+ui.cm.name+"/mod/reports/"+v+"/remove");
+    ui.cm.reports=(ui.cm.reports||[]).filter(function(r){return r.id!==v});
+    toast("Content removed.");
+    break}
+  case "m-ban":{
+    var rz=prompt("Reason for banning user:");
+    if(!rz)break;
+    await api("POST","/api/communities/"+ui.cm.name+"/mod/ban",{userId:v,reason:rz});
+    toast("User banned from this community.");
+    break}
+  case "m-appoint":{
+    var un=val("m-newmod");if(!un){ui.err="Enter a username.";break}
+    await api("POST","/api/communities/"+ui.cm.name+"/moderators",{username:un});
+    ui.cm.modsData=await api("GET","/api/communities/"+ui.cm.name+"/moderators");
+    toast("Appointed u/"+un+" as moderator.");
+    break}
+  case "m-delmod":{
+    await api("DELETE","/api/communities/"+ui.cm.name+"/moderators/"+v);
+    ui.cm.modsData=await api("GET","/api/communities/"+ui.cm.name+"/moderators");
+    toast("Removed u/"+v+" from moderators.");
+    break}
+  case "m-saverules":{
+    var rls=val("m-rules-text");
+    await api("PUT","/api/communities/"+ui.cm.name+"/rules",{rules:rls});
+    if(ui.cm.data&&ui.cm.data.community)ui.cm.data.community.rules=rls;
+    toast("Community rules saved.");
+    break}
+  case "dismissemg":ui.emgAlert=null;break;
+  case "u-anon":{var ad=await api("POST","/api/auth/register",{});CU=ad.user;ui.cRec=ad.recovery;toast("Created u/"+CU.username);break}
+  case "u-showlogin":ui.showLogin=true;break;
+  case "u-hidelogin":ui.showLogin=false;break;
+  case "u-login":{var uk=val("u-rec");if(!uk){ui.err="Paste your recovery key.";break}var ud=await api("POST","/api/auth/login",{recovery:uk});CU=ud.user;ui.showLogin=false;toast("Signed in as u/"+CU.username);break}
+  case "u-setname":{var un=val("u-newname");if(!un){ui.err="Enter a username.";break}var nd=await api("POST","/api/auth/username",{username:un});CU=nd.user;toast("Username set: u/"+CU.username);break}
+  case "u-showrec":{var rd=await api("POST","/api/auth/recovery");ui.cRec=rd.recovery;break}
+  case "u-logout":
+    await api("POST","/api/auth/logout");
+    CU=null;ui.cRec=null;ui.unreadNotifs=0;
+    if(sseNotifs){sseNotifs.close();sseNotifs=null}
+    if(ssePost){ssePost.close();ssePost=null;ssePostId=null}
+    if(sseDeal){sseDeal.close();sseDeal=null;sseDealId=null}
+    toast("Logged out");
+    break;
+  case "hnotifs":ui.cm={v:"notifs"};break;
+  case "hnotifreadall":{
+    await api("POST","/api/notifications/read-all");
+    ui.unreadNotifs=0;
+    if(ui.cm)ui.cm.notifsData=await api("GET","/api/notifications");
+    toast("All notifications marked as read.");
+    break}
+  case "hopento-notif":{
+    var pts=v.split("|"),nId=pts[0],nLink=pts.slice(1).join("|");
+    await api("POST","/api/notifications/"+nId+"/read");
+    if(ui.unreadNotifs>0)ui.unreadNotifs--;
+    if(nLink.indexOf("/posts/")!==-1){
+      ui.cm={v:"post",pid:nLink.split("/posts/")[1]};
+    }else if(nLink.indexOf("/deals/")!==-1){
+      ui.cm={v:"deal",dealId:nLink.split("/deals/")[1]};
+    }else if(nLink.indexOf("/communities/")!==-1){
+      ui.cm={v:"comm",name:nLink.split("/communities/")[1]};
+    }
+    break}
+  case "hdeals":ui.cm={v:"deals"};break;
+  case "hopendeal":ui.cm={v:"deal",dealId:v};break;
+  case "hsetposttype":ui.newPostType=v;rerender();return;
+  case "acceptoffer":{
+    if(!CU){ui.err="Sign in to accept an offer.";break}
+    var pts=v.split("|"),helperId=pts[0],commentId=pts[1];
+    var res=await api("POST","/api/posts/"+ui.cm.pid+"/accept-offer",{helperId:helperId,commentId:commentId});
+    toast("Offer accepted! Opening deal chat...");
+    ui.cm={v:"deal",dealId:res.dealId};
+    break}
+  case "hsenddealmsg":{
+    if(!CU){ui.err="Sign in to send messages.";break}
+    var dtx=val("deal-msg");if(!dtx)break;
+    await api("POST","/api/deals/"+ui.cm.dealId+"/messages",{text:dtx});
+    val("deal-msg","");
+    ui.cm.deal=await api("GET","/api/deals/"+ui.cm.dealId);
+    break}
+  case "hfulfilldeal":{
+    if(!CU){ui.err="Sign in to fulfill deal.";break}
+    var rting=parseInt(val("deal-rating"),10)||5;
+    var rvw=val("deal-review")||"";
+    await api("POST","/api/deals/"+ui.cm.dealId+"/fulfill",{rating:rting,review:rvw});
+    toast("Deal marked fulfilled & helper rated!");
+    ui.cm.deal=await api("GET","/api/deals/"+ui.cm.dealId);
+    break}
+  case "hpoststatus":{
+    if(!CU){ui.err="Sign in to update post status.";break}
+    await api("PATCH","/api/posts/"+ui.cm.pid+"/status",{status:v});
+    toast("Status updated to "+v);
+    ui.cm.post=await api("GET","/api/posts/"+ui.cm.pid);
+    break}
+  case "hfiltertype":ui.cm.filterType=(v==="all"?null:v);ui.cm.data=null;break;
+  case "hfilterstatus":ui.cm.filterStatus=(v==="all"?null:v);ui.cm.data=null;break;
+  case "hfiltercity":{var fcit=val("comm-post-city");ui.cm.filterCity=fcit||null;ui.cm.data=null;break}
+  case "hfiltercityclear":{ui.cm.filterCity=null;ui.cm.data=null;break}
+  case "hcommcity":{var cfcit=val("cm-city-filter");ui.cm.commCity=cfcit||null;ui.cm.list=null;break}
+  case "hcommcityclear":{ui.cm.commCity=null;ui.cm.list=null;break}
+  case "toggletheme":toggleTheme();break;
+  case "hpickimg":{var fi=$("n-imgfile");if(fi)fi.click();return;}
+  case "hclearimg":ui.postImgUrl=null;ui.postImgName=null;rerender();break;
+  case "hnewc":{if(!CU){ui.err="Please get an account or sign in first.";break}
+    var cn=val("cm-name");if(!cn){ui.err="Give your community a name.";break}
+    var rc=await api("POST","/api/communities",{name:cn,desc:val("cm-desc"),city:val("cm-city")});ui.cm={v:"comm",name:rc.name};break}
+  case "hnewp":{if(!CU){ui.err="Please get an account or sign in first.";break}
+    var pt=val("n-title");if(!pt){ui.err="Add a title for your post.";break}
+    var rp=await api("POST","/api/communities/"+ui.cm.name+"/posts",{
+      title:pt,
+      body:val("n-body"),
+      postType:ui.newPostType||"NEED",
+      budget:val("n-budget"),
+      targetTime:val("n-time"),
+      location:val("n-loc"),
+      city:val("n-city"),
+      imageUrl:ui.postImgUrl||null
+    });
+    ui.postImgUrl=null;
+    ui.postImgName=null;
+    if(rp.emergency){
+      ui.emgAlert=rp.message||"Immediate crisis keywords detected. Call 112.";
+    }
+    ui.cm={v:"post",name:ui.cm.name,pid:rp.id};break}
+  case "ccomment":{if(!CU){ui.err="Please get an account or sign in first.";break}
+    var ct=val("c-text");if(!ct)break;await api("POST","/api/posts/"+ui.cm.pid+"/comments",{text:ct});break}
+  case "pkey":PK=val("k-in");if(!PK)break;lset("tb-key",PK);break;
+  case "atab":ui.aTab=v;break;
+  case "aai":await kapi("POST","/api/admin/ai",{ai:!ui.adm.ai});break;
+  case "arep":{var ap=v.split("|");await kapi("POST","/api/admin/ping/"+ap[0]+"/reply",{text:ap.slice(1).join("|")});break}
+  case "aop":{var ao=v.split("|");await kapi("POST","/api/admin/ping/"+ao[0]+"/"+ao[1]);break}
+  case "fmode":ui.fMode=v;break;
+  case "startscan":ui.scanning=true;rerender();startCam();return;
+  case "stopscan":ui.scanning=false;break;
+  case "pick":$("qrfile").click();return;
+  case "usecode":handleScan(val("qrtext"));return;
+  case "contact":ui.fMode=ui.fRoomObj&&(ui.fRoomObj.status==="pending"||ui.fRoomObj.status==="active")?"chat":"form";break;
+  case "submit":{var it=val("f-item"),nm=val("f-name"),ms=val("f-msg");
+    if(!it||!nm||!ms){ui.err="Item, display name and message are required.";break}
+    var q=await api("POST","/api/tag/"+ui.tagId+"/request",{item:it,fname:nm,desc:val("f-desc"),loc:val("f-loc"),msg:ms});
+    RT=q.roomToken;lset("tb-room",RT);ui.fMode="chat";toast("Sent. The owner has been notified.");break}
+  case "send":{var p=v.split("|"),t=val("msg");if(!t)break;
+    if(p[0]==="owner")await oapi("POST","/api/me/rooms/"+p[1]+"/msg",{text:t});
+    else await api("POST","/api/room/msg",{text:t},{"x-room":RT});break}
+  case "accept":await oapi("POST","/api/me/rooms/"+v+"/accept");ui.tab="active";ui.sel=v;break;
+  case "reject":await oapi("POST","/api/me/rooms/"+v+"/reject");ui.sel=null;break;
+  case "block":await oapi("POST","/api/me/rooms/"+v+"/block");ui.sel=null;toast("Finder blocked");break;
+  case "close":await oapi("POST","/api/me/rooms/"+v+"/close");ui.sel=null;break;
+  case "recover":await oapi("POST","/api/me/rooms/"+v+"/recover");ui.tab="history";ui.sel=v;break;
+  case "dorecover":{var c=val("rc");if(!c){ui.err="Paste your code.";break}
+    await api("GET","/api/room",null,{"x-room":c});RT=c;lset("tb-room",c);ui.fMode="chat";ui.scanned=true;break}
+  }}catch(e){ui.err=e.message}
+  refresh(true);
+}
+document.addEventListener("click",function(e){var b=e.target.closest("[data-act]");if(b)act(b.dataset.act,b.dataset.v)});
+document.addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&e.target.id==="msg"){var b=document.querySelector('[data-act="send"]');if(b)act("send",b.dataset.v)}
+  if(e.key==="Enter"&&e.target.id==="deal-msg"){var db=document.querySelector('[data-act="hsenddealmsg"]');if(db)act("hsenddealmsg")}
+});
+function boot(){
+  if(/(tag-[0-9a-f]{20}|place-[a-z0-9-]+)/i.test(location.hash)){ui.role="finder";handleScan(location.hash)}
+  refresh(true);setInterval(refresh,2500);
+}
+boot();
+</script>
+</body>
+</html>
