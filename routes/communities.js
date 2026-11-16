@@ -65,7 +65,7 @@ router.post("/", requireUser, (req, res) => {
   }
   const name = cname(req.body.name);
   if (name.length < 3) {
-    return fail(res, 400, "Name needs 3+ letters, numbers or underscores (e.g. cabs_city).");
+    return fail(res, 400, "Name needs 3+ letters, numbers or underscores (e.g. delhi_cabs).");
   }
   if (RESERVED_NAMES.has(name)) {
     return fail(res, 400, "That name is reserved.");

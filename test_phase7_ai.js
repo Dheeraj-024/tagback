@@ -140,7 +140,7 @@ async function runAITests() {
   // Attempt to publish an advance payment scam post
   const blockedPost = await mockRequest(app, {
     method: "POST",
-    url: "/api/communities/cabs_city/posts",
+    url: "/api/communities/urgent_delhi_cabs/posts",
     body: {
       title: "Cheap cab deal",
       body: "Send advance payment via UPI to confirm your ride now"
@@ -155,7 +155,7 @@ async function runAITests() {
   // Publish valid post
   const goodPost = await mockRequest(app, {
     method: "POST",
-    url: "/api/communities/cabs_city/posts",
+    url: "/api/communities/urgent_delhi_cabs/posts",
     body: {
       title: "Best route from Gurgaon to Airport at peak hours?",
       body: "Need suggestions for travel tomorrow morning."

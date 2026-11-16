@@ -335,6 +335,18 @@ var ui = {
 var CU = null, NICK = null, PK = null, seen = {}, first = true;
 var sseNotifs = null, ssePost = null, ssePostId = null, sseDeal = null, sseDealId = null;
 
+var DEFAULT_COMMUNITIES = [
+  { name: "urgent_delhi_cabs", title: "Urgent Cabs & Airport Carpooling Delhi NCR", city: "Delhi NCR", desc: "Emergency rides, airport carpools, late-night cabs, and fare splitting across Delhi, Gurgaon & Noida.", members: 128, posts: 45 },
+  { name: "bakeries_and_cafes", title: "Artisan Bakeries, Cafes & Home Bakers", city: "Delhi NCR", desc: "Supporting local neighborhood bakers, sourdough crafters, specialty roasters, and dessert studios.", members: 94, posts: 32 },
+  { name: "new_restaurant_openings", title: "New Restaurant Openings & Food Pop-ups", city: "Delhi NCR", desc: "Spotlight on new eateries, cloud kitchens, regional specialty kitchens, and chef pop-up dining experiences.", members: 110, posts: 28 },
+  { name: "smallbiz_shoutouts", title: "Small Business & Local Artisan Directory", city: "All India", desc: "Free showcase for neighborhood craftsmen, tailors, vintage restorers, potteries, and boutique makers.", members: 165, posts: 56 },
+  { name: "budget_stays_delhi", title: "Budget Stays, Emergency Rooms & PGs", city: "Delhi NCR", desc: "Affordable lodging, safe student PGs, flatmate openings, and emergency rooms near major stations and hospitals.", members: 87, posts: 24 },
+  { name: "emergency_local_help", title: "Neighborhood Emergency Help & Handymen", city: "Delhi NCR", desc: "Urgent local assistance: burst water pipes, electricians for tripping breakers, reliable locksmiths, and handymen.", members: 142, posts: 61 },
+  { name: "lost_and_found_delhi", title: "Delhi NCR Lost & Found with TagBack QR", city: "Delhi NCR", desc: "Lost your bag, wallet, keys, or pet? Scan a TagBack Smart QR sticker to ping the owner safely and anonymously.", members: 215, posts: 74 },
+  { name: "bangalore_rides", title: "Bangalore Tech Corridor Commute & Cabs", city: "Bangalore", desc: "Daily office carpools, EV cab sharing, and airport rides across ORR, Whitefield, Bellandur, and HSR Layout.", members: 98, posts: 39 },
+  { name: "campus_classifieds", title: "DU North Campus Student Help & Flatmates", city: "Delhi NCR", desc: "Delhi University student community: verified flatmate matching, textbook hand-me-downs, and student help.", members: 180, posts: 67 }
+];
+
 function load() { try { var v = localStorage.getItem(KEY); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 function rid(n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a, function(b) { return b.toString(16).padStart(2, "0"); }).join(""); }
@@ -930,7 +942,7 @@ function PostCard(p) {
   var isSaved = ui.savedPosts && ui.savedPosts.includes(p.id);
   var authorName = p.authorNick || p.author_nick || (p.nick) || "anon";
   var initial = (authorName[0] || "U").toUpperCase();
-  var commName = p.communityName || p.community_name || p.comm || "cabs_city";
+  var commName = p.communityName || p.community_name || p.comm || "urgent_delhi_cabs";
 
   var chipsHtml = "";
   if (p.location || p.city) {
@@ -1254,7 +1266,7 @@ function CommunityFeedView() {
 
 function ExploreCommunitiesView() {
   var c = ui.cm || { v: "list" };
-  var list = c.list || [];
+  var list = (c.list && c.list.length) ? c.list : DEFAULT_COMMUNITIES;
   var curFilter = c.filter || "all";
   var searchQ = c.exploreSearch || "";
   var curCat = c.exploreCat || "all";
@@ -1265,7 +1277,11 @@ function ExploreCommunitiesView() {
     }
     if (curCat === "local" && !x.city) return false;
     if (curCat === "cabs" && !x.name.includes("cab") && !x.name.includes("ride")) return false;
-    if (curCat === "hotels" && !x.name.includes("hotel") && !x.name.includes("stay")) return false;
+    if (curCat === "hotels" && !x.name.includes("hotel") && !x.name.includes("stay") && !x.name.includes("pg")) return false;
+    if (curCat === "food" && !x.name.includes("bake") && !x.name.includes("cafe") && !x.name.includes("food") && !x.name.includes("restaurant") && !(x.desc && /bake|cafe|food|restaurant|dining|sourdough/i.test(x.desc))) return false;
+    if (curCat === "biz" && !x.name.includes("biz") && !x.name.includes("shop") && !(x.desc && /business|artisan|craft|handmade|tailor|repair|shop/i.test(x.desc))) return false;
+    if (curCat === "help" && !x.name.includes("help") && !(x.desc && /help|urgent|plumber|emergency/i.test(x.desc))) return false;
+    if (curCat === "lost" && !x.name.includes("lost") && !x.name.includes("found")) return false;
     return true;
   });
 
@@ -1273,7 +1289,7 @@ function ExploreCommunitiesView() {
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:20px">' +
       '<div>' +
         '<h1>Explore Communities</h1>' +
-        '<p class="mute">Discover local communities for cab rides, neighborhood help, accommodation, and campus assistance.</p>' +
+        '<p class="mute">Discover local communities for urgent cabs, artisan bakeries, restaurant openings, small business support, and neighborhood help.</p>' +
       '</div>' +
       '<button class="b" data-act="open-create-comm-modal" style="font-size:13.5px;padding:9px 18px">＋ Create a Community</button>' +
     '</div>' +
@@ -1293,25 +1309,29 @@ function ExploreCommunitiesView() {
         (CU ? '<button class="sort-tab-btn ' + (curFilter === 'joined' ? 'on' : '') + '" data-act="hfilter" data-v="joined">My Communities</button>' : '') +
       '</div>' +
     '</div>' +
-    '<div class="category-filter-row" style="margin-bottom:20px">' +
+    '<div class="category-filter-row" style="margin-bottom:20px;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">' +
       '<button class="cat-pill-btn ' + (curCat === 'all' ? 'on' : '') + '" data-act="explore-cat" data-v="all">All Topics</button>' +
       '<button class="cat-pill-btn ' + (curCat === 'local' ? 'on' : '') + '" data-act="explore-cat" data-v="local">🏙️ Local & Cities</button>' +
       '<button class="cat-pill-btn ' + (curCat === 'cabs' ? 'on' : '') + '" data-act="explore-cat" data-v="cabs">🚗 Rides & Cabs</button>' +
-      '<button class="cat-pill-btn ' + (curCat === 'hotels' ? 'on' : '') + '" data-act="explore-cat" data-v="hotels">🏨 Stays & Hotels</button>' +
+      '<button class="cat-pill-btn ' + (curCat === 'food' ? 'on' : '') + '" data-act="explore-cat" data-v="food">🥐 Bakeries & Dining</button>' +
+      '<button class="cat-pill-btn ' + (curCat === 'biz' ? 'on' : '') + '" data-act="explore-cat" data-v="biz">🏪 Small Business</button>' +
+      '<button class="cat-pill-btn ' + (curCat === 'hotels' ? 'on' : '') + '" data-act="explore-cat" data-v="hotels">🏨 Stays & Rooms</button>' +
+      '<button class="cat-pill-btn ' + (curCat === 'help' ? 'on' : '') + '" data-act="explore-cat" data-v="help">🚨 Urgent Help</button>' +
+      '<button class="cat-pill-btn ' + (curCat === 'lost' ? 'on' : '') + '" data-act="explore-cat" data-v="lost">🏷️ Lost & Found</button>' +
     '</div>' +
     '<div class="explore-grid">' +
       (filtered.length ? filtered.map(function(x) {
-        var initial = (x.name[0] || 'C').toUpperCase();
+        var iconObj = getCommIcon(x);
         return '<div class="comm-card" data-act="hcomm" data-v="' + esc(x.name) + '">' +
           '<div class="comm-card-header">' +
             '<div style="display:flex;gap:12px;align-items:center">' +
-              '<div class="comm-card-icon">' + esc(initial) + '</div>' +
+              '<div class="comm-card-icon" style="background:' + iconObj.gradient + ';font-size:18px">' + iconObj.icon + '</div>' +
               '<div>' +
                 '<div class="comm-card-name">c/' + esc(x.name) + '</div>' +
                 (x.city ? '<span class="pill" style="font-size:11px">🏙️ ' + esc(x.city) + '</span>' : '') +
               '</div>' +
             '</div>' +
-            '<button class="b ' + (x.joined ? 'alt' : '') + '" data-act="hjoinleave" data-v="' + esc(x.name) + '"  style="padding:6px 14px;font-size:12px">' +
+            '<button class="b ' + (x.joined ? 'alt' : '') + '" data-act="hjoinleave" data-v="' + esc(x.name) + '" style="padding:6px 14px;font-size:12px">' +
               (x.joined ? 'Joined ✓' : 'Join') +
             '</button>' +
           '</div>' +
@@ -1543,7 +1563,7 @@ function PostDetailView() {
   var isAuthor = CU && p.userId && CU.id === p.userId;
   var userVote = p.userVote || 0;
   var isSaved = ui.savedPosts && ui.savedPosts.includes(p.id);
-  var commName = p.communityName || p.community_name || p.comm || "cabs_city";
+  var commName = p.communityName || p.community_name || p.comm || "urgent_delhi_cabs";
 
   var chipsHtml = "";
   if (p.location || p.city) chipsHtml += '<span class="post-info-chip">📍 ' + esc(p.city ? p.city + (p.location ? ' · ' + p.location : '') : p.location) + '</span>';
@@ -1650,11 +1670,14 @@ function ModQueueView() {
 
 function getCommIcon(c) {
   var n = (c && c.name) ? c.name.toLowerCase() : "";
-  if (n.includes("cab") || n.includes("ride")) return { icon: "🚖", gradient: "linear-gradient(135deg, #F5AD35, #E11D48)" };
-  if (n.includes("hotel") || n.includes("stay")) return { icon: "🏨", gradient: "linear-gradient(135deg, #818CF8, #4F46E5)" };
-  if (n.includes("lost") || n.includes("found")) return { icon: "🔍", gradient: "linear-gradient(135deg, #A855F7, #EC4899)" };
-  if (n.includes("help") || n.includes("urgent")) return { icon: "🤝", gradient: "linear-gradient(135deg, #10B981, #059669)" };
-  if (n.includes("campus") || n.includes("tech")) return { icon: "💻", gradient: "linear-gradient(135deg, #06B6D4, #0284C7)" };
+  if (n.includes("cab") || n.includes("ride")) return { icon: "🚗", gradient: "linear-gradient(135deg, #F5AD35, #E11D48)" };
+  if (n.includes("hotel") || n.includes("stay") || n.includes("pg")) return { icon: "🏨", gradient: "linear-gradient(135deg, #818CF8, #4F46E5)" };
+  if (n.includes("bake") || n.includes("cafe") || n.includes("bread")) return { icon: "🥐", gradient: "linear-gradient(135deg, #F59E0B, #B45309)" };
+  if (n.includes("restaurant") || n.includes("food")) return { icon: "🍕", gradient: "linear-gradient(135deg, #EF4444, #B91C1C)" };
+  if (n.includes("biz") || n.includes("shop") || n.includes("market") || n.includes("artisan")) return { icon: "🏪", gradient: "linear-gradient(135deg, #10B981, #047857)" };
+  if (n.includes("help") || n.includes("urgent")) return { icon: "🚨", gradient: "linear-gradient(135deg, #EF4444, #991B1B)" };
+  if (n.includes("lost") || n.includes("found")) return { icon: "🏷️", gradient: "linear-gradient(135deg, #A855F7, #EC4899)" };
+  if (n.includes("campus") || n.includes("student")) return { icon: "🎓", gradient: "linear-gradient(135deg, #06B6D4, #0284C7)" };
   var colors = [
     "linear-gradient(135deg, #F5AD35, #D97706)",
     "linear-gradient(135deg, #3B82F6, #1D4ED8)",
@@ -1688,20 +1711,50 @@ function getSmartRecommendation(text, popComms) {
     }
     if (/cab|taxi|ride|lift|drop|carpool|airport|station/i.test(lower)) {
       if (cname.includes("cab") || cname.includes("ride") || cdesc.includes("cab") || cdesc.includes("trip")) {
-        score += 50;
+        score += 55;
         reasons.push("transit & cabs");
       }
     }
     if (/hotel|stay|room|pg|lodge|hostel/i.test(lower)) {
       if (cname.includes("hotel") || cname.includes("stay") || cdesc.includes("stay") || cdesc.includes("hotel")) {
         score += 55;
-        reasons.push("stays");
+        reasons.push("stays & lodging");
       }
     }
-    if (/lost|found|missing|wallet|bag|laptop|phone/i.test(lower)) {
-      if (cname.includes("lost") || cname.includes("found") || cdesc.includes("lost")) {
+    if (/bakery|baker|cake|sourdough|bread|pastry|dessert|cafe|coffee|roast/i.test(lower)) {
+      if (cname.includes("bake") || cname.includes("cafe") || cdesc.includes("bake") || cdesc.includes("sourdough") || cdesc.includes("cafe")) {
+        score += 65;
+        reasons.push("bakery & cafes");
+      }
+    }
+    if (/restaurant|dining|foodie|kitchen|chef|popup|pop-up|eatery|pizza|momo|food/i.test(lower)) {
+      if (cname.includes("restaurant") || cname.includes("food") || cdesc.includes("restaurant") || cdesc.includes("eatery")) {
+        score += 60;
+        reasons.push("dining & restaurant openings");
+      }
+    }
+    if (/business|shop|artisan|craft|handmade|tailor|watch|pottery|repair|boutique/i.test(lower)) {
+      if (cname.includes("biz") || cname.includes("shop") || cdesc.includes("artisan") || cdesc.includes("business")) {
         score += 55;
+        reasons.push("small business");
+      }
+    }
+    if (/student|campus|college|university|exam|books|notes|hostel|flatmate|north campus/i.test(lower)) {
+      if (cname.includes("campus") || cname.includes("student") || cdesc.includes("campus") || cdesc.includes("student")) {
+        score += 60;
+        reasons.push("campus & student life");
+      }
+    }
+    if (/lost|found|missing|wallet|bag|laptop|phone|keys|tagback/i.test(lower)) {
+      if (cname.includes("lost") || cname.includes("found") || cdesc.includes("lost")) {
+        score += 65;
         reasons.push("lost & found");
+      }
+    }
+    if (/help|urgent|plumber|electrician|locksmith|leakage|burst|repair/i.test(lower)) {
+      if (cname.includes("help") || cdesc.includes("help") || cdesc.includes("plumber")) {
+        score += 60;
+        reasons.push("urgent help");
       }
     }
     if (score > bestScore) {
@@ -1826,8 +1879,8 @@ function ChooseCommunityModal(ui, popComms) {
 function CreatePostModal(d, CU, ui) {
   if (!ui.createPostModalOpen) return '';
   var catId = ui.postModalCat || "DISCUSSION";
-  var popComms = (ui.cm && ui.cm.popList) || [{ name: "cabs_city" }, { name: "hotels_city" }];
-  var commName = (d && d.community && d.community.name) || ui.postModalComm || (popComms[0] && popComms[0].name) || "cabs_city";
+  var popComms = (ui.cm && ui.cm.popList && ui.cm.popList.length) ? ui.cm.popList : DEFAULT_COMMUNITIES;
+  var commName = (d && d.community && d.community.name) || ui.postModalComm || (popComms[0] && popComms[0].name) || "urgent_delhi_cabs";
   var curComm = popComms.find(function(c) { return c.name === commName; }) || { name: commName, desc: "Community on TagBack", city: null, members: 1 };
   var curIcon = getCommIcon(curComm);
   var smartRec = getSmartRecommendation((ui.aiPromptText || "") + " " + (ui.postDraftTitle || "") + " " + (ui.postDraftBody || ""), popComms);
@@ -1942,7 +1995,7 @@ function CreateCommunityModal(ui) {
         '<label style="margin:0 0 4px">Community Name <span style="color:var(--bad)">*</span></label>' +
         '<div style="display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:0 10px">' +
           '<span style="color:var(--text-muted);font-weight:700">c/</span>' +
-          '<input id="m-comm-name" placeholder="e.g. cabs_delhi or tech_help" style="border:none;background:transparent;padding:9px 6px">' +
+          '<input id="m-comm-name" placeholder="e.g. urgent_delhi_cabs or artisan_bakers" style="border:none;background:transparent;padding:9px 6px">' +
         '</div>' +
         '<span class="mute" style="font-size:11px">Letters, numbers, and underscores (3-30 chars).</span>' +
       '</div>' +
@@ -2059,7 +2112,7 @@ function OfferRideModal(ui) {
 }
 
 function placeAdminView() {
-  var popComms = (ui.cm && ui.cm.popList) || [{ name: "cabs_city" }, { name: "hotels_city" }];
+  var popComms = (ui.cm && ui.cm.popList && ui.cm.popList.length) ? ui.cm.popList : DEFAULT_COMMUNITIES;
   var modals = CreatePostModal(ui.cm && ui.cm.data, CU, ui) +
     ChooseCommunityModal(ui, popComms) +
     CreateCommunityModal(ui) +
@@ -2517,7 +2570,7 @@ async function act(a, v) {
           rerender();
           break;
         }
-        var targetComm = val("cp-comm-select") || (ui.cm && ui.cm.name) || val("n-post-comm") || "cabs_city";
+        var targetComm = val("cp-comm-select") || (ui.cm && ui.cm.name) || val("n-post-comm") || "urgent_delhi_cabs";
         var title = val("cp-title") || ui.postDraftTitle || val("n-post-title");
         var city = val("cp-city") || ui.postDraftCity || val("n-post-city") || "Delhi";
         if (!title) {
@@ -2597,7 +2650,7 @@ async function act(a, v) {
           break;
         }
         var time = val("r-time"), seats = val("r-seats");
-        await api("POST", "/api/communities/cabs_city/posts", {
+        await api("POST", "/api/communities/urgent_delhi_cabs/posts", {
           title: "Ride: " + rf + " ➔ " + rt + (time ? " at " + time : ""),
           postType: "RIDE_SHARING",
           city: val("r-city") || "Delhi",
@@ -3271,7 +3324,7 @@ document.addEventListener("input", function(e) {
     ui.commSearchQ = e.target.value.toLowerCase().trim();
     var listEl = document.querySelector(".reddit-comm-list");
     if (listEl) {
-      var popComms = (ui.cm && ui.cm.popList) || [{ name: "cabs_city" }, { name: "hotels_city" }];
+      var popComms = (ui.cm && ui.cm.popList && ui.cm.popList.length) ? ui.cm.popList : DEFAULT_COMMUNITIES;
       listEl.innerHTML = renderCommListItems(ui, popComms);
     }
     return;

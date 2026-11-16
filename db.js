@@ -253,12 +253,8 @@ function runMigrations() {
       } else {
         const existingComm = db.prepare("SELECT COUNT(*) AS count FROM communities").get();
         if (existingComm.count === 0) {
-          const now = Date.now();
-          insertCommunity.run("cabs_city", "Need a cab? Post your trip, drivers reply with offers.", "PingME", now);
-          insertCommunity.run("hotels_city", "Looking for a stay? Post your need, hosts reply with offers.", "PingME", now);
-          insertPost.run("p1", "cabs_city", "Traveler-27", "Need a cab to the airport, 6 AM tomorrow", "2 people, 2 bags. Looking for a fixed fare.", 1, now);
-          insertComment.run("c1", "p1", "Driver-81", "I can do it for ₹900, AC sedan.", now);
-          console.log("Migration: seeded initial default communities and sample post");
+          seedRealisticCommunities(db);
+          console.log("Migration: seeded initial realistic communities and sample posts");
         }
       }
       db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run("initial_json_import", Date.now());
@@ -276,6 +272,274 @@ function runMigrations() {
       db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run("phase1_auth", Date.now());
     })();
   }
+
+  // Phase 8: Seed realistic communities addressing real-world issues & small businesses
+  const phase8 = db.prepare("SELECT 1 FROM _migrations WHERE name = ?").get("seed_realistic_communities_v2");
+  if (!phase8) {
+    db.transaction(() => {
+      try {
+        // Clean up legacy placeholder communities
+        db.prepare("DELETE FROM communities WHERE name IN ('cabs_city', 'hotels_city', 'cabs_delhi', 'delhi_cabs')").run();
+        seedRealisticCommunities(db);
+        db.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").run("seed_realistic_communities_v2", Date.now());
+        console.log("Migration: seeded realistic communities with authentic issues and small business support");
+      } catch (e) {
+        console.error("Migration seed_realistic_communities error:", e.message);
+      }
+    })();
+  }
+}
+
+// Helper: Seed realistic, authentic communities and starter discussions
+function seedRealisticCommunities(targetDb) {
+  const insertComm = targetDb.prepare(`
+    INSERT OR IGNORE INTO communities (name, title, description, city, rules, created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertPost = targetDb.prepare(`
+    INSERT OR IGNORE INTO posts (id, community_name, author_nick, title, body, post_type, budget, location, city, comment_count, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertComment = targetDb.prepare(`
+    INSERT OR IGNORE INTO comments (id, post_id, author_nick, body, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  const now = Date.now();
+  const dayAgo = now - 86400000;
+  const twoHoursAgo = now - 7200000;
+  const threeHoursAgo = now - 10800000;
+  const fourHoursAgo = now - 14400000;
+  const fiveHoursAgo = now - 18000000;
+
+  // 1. urgent_delhi_cabs (Urgent cabs, airport carpooling, late night rides)
+  insertComm.run(
+    "urgent_delhi_cabs",
+    "Urgent Cabs & Airport Carpooling Delhi NCR",
+    "Emergency rides, airport carpools, late-night cabs, and fare splitting across Delhi, Gurgaon & Noida. Connect directly with verified co-commuters.",
+    "Delhi NCR",
+    "No surge gouging. Specify exact pickup and drop points. Respect co-passengers.",
+    "TagBack",
+    dayAgo - 100000
+  );
+  insertPost.run(
+    "p_delhi_cab_1",
+    "urgent_delhi_cabs",
+    "Rohan_Mehta",
+    "Carpooling from Connaught Place to IGI Terminal 3 tomorrow 5:30 AM",
+    "Booked an EV sedan via BluSmart. Have 2 open seats with luggage boot space. Splitting fare ₹600 total (₹200 per passenger). Drop a reply or ping directly!",
+    "RIDE_SHARING",
+    200,
+    "CP ➔ IGI Terminal 3",
+    "Delhi",
+    2,
+    fourHoursAgo
+  );
+  insertComment.run("c_dc_1", "p_delhi_cab_1", "Rajiv_K", "Hey Rohan, I am at Barakhamba Road, right on the way! Bringing 1 cabin bag. Would love to join.", fourHoursAgo + 1200000);
+  insertComment.run("c_dc_2", "p_delhi_cab_1", "Rohan_Mehta", "Awesome Rajiv! Pickup confirmed near Barakhamba Metro Gate 2 at 5:40 AM.", fourHoursAgo + 1800000);
+
+  // 2. bakeries_and_cafes (Local home bakers, sourdough artisans, cafe popups)
+  insertComm.run(
+    "bakeries_and_cafes",
+    "Artisan Bakeries, Cafes & Home Bakers",
+    "Supporting local neighborhood bakers, sourdough crafters, specialty roasters, and dessert studios. Fresh drops, pre-orders, and catering recommendations.",
+    "Delhi NCR",
+    "Home bakers warmly welcomed. List dietary notes (eggless, vegan, sourdough). Share honest food love.",
+    "TagBack",
+    dayAgo - 90000
+  );
+  insertPost.run(
+    "p_bake_1",
+    "bakeries_and_cafes",
+    "CrustAndCrumb",
+    "🍞 Sunday Sourdough Drop: 48-hr slow fermented country loaves & cinnamon brioche in South Ex",
+    "Batch out at 8 AM Sunday! Country sourdough loaf (₹220) and cardamom-cinnamon brioche buns (₹140). Pure wild yeast, organic MP Sharbati flour. Only 25 loaves this weekend — reserve yours in replies!",
+    "OFFER",
+    220,
+    "South Extension Part 2",
+    "Delhi",
+    2,
+    twoHoursAgo
+  );
+  insertComment.run("c_bk_1", "p_bake_1", "Pooja_Sharma", "The last cranberry walnut batch was pure perfection! Please keep 2 country loaves for me, picking up at 9 AM.", twoHoursAgo + 600000);
+  insertComment.run("c_bk_2", "p_bake_1", "CrustAndCrumb", "Reserved for you Pooja! Will keep them fresh in linen bags.", twoHoursAgo + 900000);
+
+  // 3. new_restaurant_openings (New dining spots, cloud kitchens, launch offers)
+  insertComm.run(
+    "new_restaurant_openings",
+    "New Restaurant Openings & Food Pop-ups",
+    "Spotlight on new eateries, cloud kitchens, regional specialty kitchens, and chef pop-up dining experiences. Help new food entrepreneurs launch strong.",
+    "Delhi NCR",
+    "Genuine recommendations and first looks only. Owners must mention opening discounts and exact address.",
+    "TagBack",
+    dayAgo - 80000
+  );
+  insertPost.run(
+    "p_resto_1",
+    "new_restaurant_openings",
+    "Chef_Sameer",
+    "🍕 Wood-fired Neapolitan Pizzeria Soft Launch in Shahpur Jat — 20% off for locals this week!",
+    "After 8 months of kitchen trials, 'Forno Antico' is open! We ferment our dough for 72 hours using Italian Caputo flour and San Marzano DOP tomatoes. Offering 20% off all dine-in orders this week to get neighborhood feedback.",
+    "ANNOUNCEMENT",
+    500,
+    "Shahpur Jat Fashion Street (near Dada Jungi House)",
+    "Delhi",
+    1,
+    threeHoursAgo
+  );
+  insertComment.run("c_res_1", "p_resto_1", "Gaurav_Foodie", "Tried the Diavola yesterday! Incredible leopard-spotting on the crust and authentic smoke aroma. Great addition to the street!", threeHoursAgo + 1500000);
+
+  // 4. budget_stays_delhi (Emergency rooms, student PGs, medical patient lodging)
+  insertComm.run(
+    "budget_stays_delhi",
+    "Budget Stays, Emergency Rooms & PGs",
+    "Affordable lodging, safe student PGs, flatmate openings, and emergency rooms near major stations and hospitals (AIIMS, Safdarjung). Transparent zero-broker deals.",
+    "Delhi NCR",
+    "No illegal broker commissions. Verified hosts only. Disclose all amenities (AC, Wi-Fi, food, power backup) upfront.",
+    "TagBack",
+    dayAgo - 70000
+  );
+  insertPost.run(
+    "p_stay_1",
+    "budget_stays_delhi",
+    "Dr_Kapoor_Residences",
+    "Sanitized private room near AIIMS & Green Park Metro for medical travelers / outpatient stay",
+    "Ground floor with wheelchair ramp, attached bathroom, hot water geyser, RO water, and high-speed Wi-Fi. Quiet atmosphere suitable for patient recovery. ₹1,200/night.",
+    "OFFER",
+    1200,
+    "Green Park Ext (500m from AIIMS)",
+    "Delhi",
+    1,
+    fiveHoursAgo
+  );
+  insertComment.run("c_st_1", "p_stay_1", "Sunita_Verma", "Very reassuring to find clean ground-floor rooms near AIIMS. Saved your contact for my mother's follow-up next Tuesday.", fiveHoursAgo + 3600000);
+
+  // 5. smallbiz_shoutouts (Local artisans, craftsmen, watch repair, boutique shops)
+  insertComm.run(
+    "smallbiz_shoutouts",
+    "Small Business & Local Artisan Directory",
+    "Free showcase for neighborhood craftsmen, tailors, vintage restorers, potteries, independent mechanics, and boutique makers. Support small, buy local.",
+    "All India",
+    "Small and independent businesses only. Zero listing commissions. Real photos and fair prices.",
+    "TagBack",
+    dayAgo - 60000
+  );
+  insertPost.run(
+    "p_biz_1",
+    "smallbiz_shoutouts",
+    "Master_Watchmaker",
+    "🕰️ 3rd generation mechanical watch restoration & repair in Old Delhi — walk-ins welcome!",
+    "My grandfather started repairing Swiss and HMT mechanical watches in 1952. If you have an inherited timepiece or vintage automatic that stopped ticking, bring it over to Ballimaran, Chandni Chowk for honest diagnosis and ultrasonic cleaning.",
+    "OFFER",
+    350,
+    "Ballimaran, Chandni Chowk",
+    "Delhi",
+    2,
+    now - 21600000
+  );
+  insertComment.run("c_bz_1", "p_biz_1", "Arjun_Vintage", "Can confirm! Master ji restored my grandfather's 1971 HMT Janata. Replaced crystal and oiled movement — running at +/- 5s a day now!", now - 18000000);
+  insertComment.run("c_bz_2", "p_biz_1", "Master_Watchmaker", "Thank you beta! Mechanical watches have a soul, we treat every heirloom with utmost respect.", now - 14400000);
+
+  // 6. emergency_local_help (Plumbers, electricians, locksmiths, urgent repairs)
+  insertComm.run(
+    "emergency_local_help",
+    "Neighborhood Emergency Help & Handymen",
+    "Urgent local assistance: burst water pipes, electricians for tripping breakers, reliable locksmiths, mechanic breakdowns, and emergency neighborhood help.",
+    "Delhi NCR",
+    "Label emergency urgency clearly. Fast response is key. Earn community trust and karma.",
+    "TagBack",
+    dayAgo - 50000
+  );
+  insertPost.run(
+    "p_help_1",
+    "emergency_local_help",
+    "Deepak_Lajpat",
+    "URGENT: Main bathroom pipe burst, need emergency plumber near Lajpat Nagar 2",
+    "Main inlet valve won't shut off completely and water is seeping into the hallway. Need an experienced plumber with pipe sealing tools urgently! Immediate payment.",
+    "HELP_REQUEST",
+    500,
+    "Lajpat Nagar II, Central Market area",
+    "Delhi",
+    2,
+    now - 7200000
+  );
+  insertComment.run("c_hp_1", "p_help_1", "Suresh_Plumbing", "Deepak ji, I am 10 minutes away at Defence Colony flyover with replacement valves and wrenches. Calling you now via deal chat!", now - 6600000);
+  insertComment.run("c_hp_2", "p_help_1", "Deepak_Lajpat", "Thank goodness! Accepted your chat, please come up to Flat 302.", now - 6000000);
+
+  // 7. bangalore_rides (Tech corridor carpooling, ORR, Bellandur, Whitefield)
+  insertComm.run(
+    "bangalore_rides",
+    "Bangalore Tech Corridor Commute & Cabs",
+    "Beat the Silk Board traffic! Daily office carpools, EV cab sharing, and airport rides across ORR, Whitefield, Bellandur, and HSR Layout.",
+    "Bangalore",
+    "Be punctual. State AC/music preferences. Cost-sharing only — no illegal commercial profit.",
+    "TagBack",
+    dayAgo - 40000
+  );
+  insertPost.run(
+    "p_blr_1",
+    "bangalore_rides",
+    "Techie_Anil",
+    "Daily EV Carpool: HSR Layout Sector 1 ➔ Bellandur EcoSpace (9:15 AM & 6:30 PM)",
+    "Driving Tata Nexon EV daily via ORR service lane. 2 seats open. Quiet ride, AC on. ₹70/seat to cover toll and charging costs. Looking for regular commuters.",
+    "RIDE_SHARING",
+    70,
+    "HSR Sector 1 ➔ EcoSpace Bellandur",
+    "Bangalore",
+    1,
+    now - 14400000
+  );
+  insertComment.run("c_blr_1", "p_blr_1", "Praveen_S", "Hi Anil, I live near Agara Lake, right on your route! Would love to take 1 seat starting Monday.", now - 10800000);
+
+  // 8. lost_and_found_delhi (TagBack QR Lost & Found)
+  insertComm.run(
+    "lost_and_found_delhi",
+    "Delhi NCR Lost & Found with TagBack QR",
+    "Lost your bag, wallet, keys, or pet in Delhi NCR? Post here or scan a TagBack Smart QR sticker to ping the owner safely and anonymously without phone number exposure.",
+    "Delhi NCR",
+    "Never post full personal documents or card numbers. Arrange safe handoffs in public places like Metro counters.",
+    "TagBack",
+    dayAgo - 30000
+  );
+  insertPost.run(
+    "p_lost_1",
+    "lost_and_found_delhi",
+    "MetroGoodSamaritan",
+    "Found black Lenovo ThinkPad bag with TagBack QR at Rajiv Chowk Gate 3",
+    "Bag was left on the seating bench near the yellow line transfer. It has a TagBack QR tag which I just scanned to send an anonymous ping to the owner! Deposited with Metro Station Master office for safekeeping.",
+    "LOST_AND_FOUND",
+    0,
+    "Rajiv Chowk Metro Station",
+    "Delhi",
+    1,
+    now - 3600000
+  );
+  insertComment.run("c_lst_1", "p_lost_1", "Aman_Gupta", "That is mine!! Received the TagBack notification on my phone. On my way to the Station Master right now. Thank you so much!", now - 1800000);
+
+  // 9. campus_classifieds (DU North Campus students, flatmates, books)
+  insertComm.run(
+    "campus_classifieds",
+    "DU North Campus Student Help & Flatmates",
+    "Delhi University student community: verified flatmate matching, textbook hand-me-downs, cycle sales, and student meal tiffin recommendations across North Campus.",
+    "Delhi NCR",
+    "Students only. No commercial brokers or advance fees. Keep prices student-friendly.",
+    "TagBack",
+    dayAgo - 20000
+  );
+  insertPost.run(
+    "p_camp_1",
+    "campus_classifieds",
+    "Meera_DU",
+    "Looking for 1 female flatmate in furnished 3BHK near Vishwavidyalaya Metro (Kamla Nagar)",
+    "Spacious sunlit bedroom with attached washroom, balcony, Wi-Fi, RO purifier, and cook already arranged. Rent is ₹7,500/month (all inclusive). 5 min walk to Miranda House and SRCC.",
+    "NEED",
+    7500,
+    "Kamla Nagar, North Campus",
+    "Delhi",
+    1,
+    now - 28800000
+  );
+  insertComment.run("c_cmp_1", "p_camp_1", "Aditi_MH", "Hey Meera! I'm a 1st year Miranda House student looking for a place. Would love to come see the room tomorrow after lectures!", now - 21600000);
 }
 
 runMigrations();
