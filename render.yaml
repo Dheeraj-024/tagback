@@ -8,17 +8,3 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SESSION_SECRET
-        generateValue: true
-
-# NOTE: If you have a paid Render account and want a persistent disk ($7/mo Starter plan)
-# so SQLite survives service redeploys, change `plan: free` to `plan: starter` and add:
-#    disk:
-#      name: tagback-data
-#      mountPath: /var/data
-#      sizeGB: 1
-# And under envVars add:
-#      - key: DB_PATH
-#        value: /var/data/tagback.db
-#      - key: UPLOADS_DIR
-#        value: /var/data/uploads

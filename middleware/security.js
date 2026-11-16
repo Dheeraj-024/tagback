@@ -22,8 +22,8 @@ function securityHeaders(req, res, next) {
   // Modern X-XSS-Protection header
   res.setHeader("X-XSS-Protection", "0");
 
-  // Permissions Policy (restrict camera to self, disable microphone & geolocation)
-  res.setHeader("Permissions-Policy", "camera=(self), microphone=(), geolocation=()");
+  // Permissions Policy (allow camera and geolocation for self, disable microphone)
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(), geolocation=(self)");
 
   // Content Security Policy (allows required CDNs for QR generator and fonts)
   const csp = [

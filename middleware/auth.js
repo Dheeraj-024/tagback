@@ -29,8 +29,26 @@ const roomOf = req => {
   return Object.values(dbRef.rooms || {}).find(r => r.tokenHash && r.tokenHash === h);
 };
 
+const findTag = id => {
+  const tid = String(id || "").toLowerCase();
+  for (const o of Object.values(dbRef.owners || {})) {
+    if (o.tags && Array.isArray(o.tags)) {
+      const tag = o.tags.find(t => t.id && t.id.toLowerCase() === tid);
+      if (tag) return { owner: o, tag };
+    }
+    if (o.qrId && o.qrId.toLowerCase() === tid) {
+      return {
+        owner: o,
+        tag: { id: o.qrId, item: (o.pub && o.pub.itemName) || "My Belongings", active: o.qrActive !== false }
+      };
+    }
+  }
+  return null;
+};
+
 const tagOwner = id => {
-  return Object.values(dbRef.owners || {}).find(o => o.qrId === String(id).toLowerCase());
+  const hit = findTag(id);
+  return hit ? hit.owner : null;
 };
 
 // --- New cookie-based community user auth ---
@@ -165,6 +183,7 @@ module.exports = {
   needKey,
   roomOf,
   tagOwner,
+  findTag,
   optionalUser,
   requireUser,
   requireUploadAuth,

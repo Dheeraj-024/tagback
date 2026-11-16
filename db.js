@@ -513,12 +513,28 @@ const queries = {
   },
 
   // --- Post queries with Hot, New, Top sorting & cursor pagination ---
-  getPostsForCommunity: (communityName, { sort = "hot", t = "all", cursor = null, page = null, limit = 25, userId = null, type = null, status = null, city = null } = {}) => {
+  getPostsForCommunity: (communityName, { sort = "hot", t = "all", cursor = null, page = null, limit = 25, userId = null, type = null, status = null, city = null, tab = null } = {}) => {
     // Auto-expire open posts older than 7 days
     queries.autoExpirePosts();
 
     const lim = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
     const now = Date.now();
+
+    let commFilter = "p.community_name = ?";
+    const commParams = [];
+    if (!communityName || communityName === "all" || communityName === "feed") {
+      if (tab === "following" && userId) {
+        commFilter = "p.community_name IN (SELECT community_name FROM memberships WHERE user_id = ?)";
+        commParams.push(userId);
+      } else if (tab === "my_posts" && userId) {
+        commFilter = "p.user_id = ?";
+        commParams.push(userId);
+      } else {
+        commFilter = "1=1";
+      }
+    } else {
+      commParams.push(communityName);
+    }
 
     let timeFilter = "";
     const timeParams = [];
@@ -550,13 +566,12 @@ const queries = {
 
     let orderSql = "";
     const orderParams = [];
-    if (sort === "new") {
+    if (sort === "new" || tab === "latest") {
       orderSql = "ORDER BY p.created_at DESC, p.id DESC";
     } else if (sort === "top") {
       orderSql = "ORDER BY p.score DESC, p.created_at DESC, p.id DESC";
     } else {
-      // sort === "hot": Time-decay formula
-      // hot_score = (max(score, 0) + 1.0) / ((age_in_hours + 2.0) ^ 1.5)
+      // sort === "hot" or popular or for_you: Time-decay formula
       orderSql = "ORDER BY ((max(p.score, 0) + 1.0) / (((? - p.created_at) / 3600000.0 + 2.0) * sqrt((? - p.created_at) / 3600000.0 + 2.0))) DESC, p.created_at DESC, p.id DESC";
       orderParams.push(now, now);
     }
@@ -565,8 +580,8 @@ const queries = {
 
     const totalRow = db.prepare(`
       SELECT COUNT(*) AS total FROM posts p
-      WHERE p.community_name = ? ${timeFilter} ${extraFilter}
-    `).get(communityName, ...timeParams, ...extraParams);
+      WHERE ${commFilter} ${timeFilter} ${extraFilter}
+    `).get(...commParams, ...timeParams, ...extraParams);
     const total = totalRow ? totalRow.total : 0;
 
     const fetchLimit = lim + 1;
@@ -581,7 +596,7 @@ const queries = {
 
     const queryParams = [
       ...headParams,
-      communityName,
+      ...commParams,
       ...timeParams,
       ...extraParams,
       ...orderParams,
@@ -600,7 +615,7 @@ const queries = {
       FROM posts p
       LEFT JOIN users u ON u.id = p.user_id
       ${voteJoin}
-      WHERE p.community_name = ? ${timeFilter} ${extraFilter}
+      WHERE ${commFilter} ${timeFilter} ${extraFilter}
       ${orderSql}
       LIMIT ? OFFSET ?
     `;

@@ -4,7 +4,7 @@ const path = require("path");
 
 const { rnd, sha, clip, fail } = require("./lib/utils");
 const { limit } = require("./middleware/rateLimit");
-const { setAuthContext, needOwner, needKey, roomOf, tagOwner, optionalUser } = require("./middleware/auth");
+const { setAuthContext, needOwner, needKey, roomOf, tagOwner, findTag, optionalUser } = require("./middleware/auth");
 const authRouter = require("./routes/auth");
 const communitiesRouter = require("./routes/communities");
 const postsRouter = require("./routes/posts");
@@ -14,6 +14,7 @@ const reportsRouter = require("./routes/reports");
 const dealsRouter = require("./routes/deals");
 const notificationsRouter = require("./routes/notifications");
 const uploadRouter = require("./routes/upload");
+const aiRouter = require("./routes/ai");
 const { UPLOADS_DIR } = require("./lib/storage");
 const { securityHeaders, corsMiddleware, csrfProtection } = require("./middleware/security");
 
@@ -109,8 +110,11 @@ app.post("/api/register", (req, res) => {
   const name = clip(req.body.name, 40);
   if (!name) return fail(res, 400, "Enter your name.");
   const token = rnd(24), id = rnd(6), rec = rnd(8), email = /^\S+@\S+\.\S+$/.test(clip(req.body.email, 120)) ? clip(req.body.email, 120) : "";
-  DB.owners[id] = { id, name, email, tokenHash: sha(token), qrId: rnd(10), qrActive: true,
-    pub: { name, note: "", ver: "blue-heron-42" }, notes: [], blocked: [], recHash: sha(rec), more: [] };
+  const qrId = rnd(10);
+  const initialItem = clip(req.body.item, 60) || "My Belongings";
+  DB.owners[id] = { id, name, email, tokenHash: sha(token), qrId, qrActive: true,
+    tags: [{ id: qrId, item: initialItem, active: true, createdAt: Date.now() }],
+    pub: { name, note: "", ver: "blue-heron-42", itemName: initialItem }, notes: [], blocked: [], recHash: sha(rec), more: [] };
   save();
   res.json({ ownerToken: token, recovery: rec });
 });
@@ -135,12 +139,63 @@ app.post("/api/me/recovery", needOwner, (req, res) => {
 
 app.get("/api/me", needOwner, (req, res) => {
   const o = req.o;
+  if (!o.tags || !Array.isArray(o.tags) || !o.tags.length) {
+    o.tags = [{ id: o.qrId, item: (o.pub && o.pub.itemName) || "My Belongings", active: o.qrActive !== false, createdAt: Date.now() }];
+    save();
+  }
   res.json({
-    owner: { name: o.name, qrId: o.qrId, qrActive: o.qrActive, pub: o.pub },
+    owner: { name: o.name, qrId: o.qrId, qrActive: o.qrActive, pub: o.pub, tags: o.tags },
     rooms: Object.values(DB.rooms).filter(r => r.ownerId === o.id).map(view),
     notes: o.notes,
     blocked: o.blocked.length
   });
+});
+
+app.post("/api/me/tags", needOwner, (req, res) => {
+  const item = clip(req.body.item, 60);
+  if (!item) return fail(res, 400, "Item name is required.");
+  if (!req.o.tags) req.o.tags = [];
+  const newTag = {
+    id: rnd(10),
+    item,
+    note: clip(req.body.note, 200) || "",
+    active: true,
+    createdAt: Date.now()
+  };
+  req.o.tags.push(newTag);
+  save();
+  res.json({ ok: true, tag: newTag, tags: req.o.tags });
+});
+
+app.post("/api/me/tags/:id/toggle", needOwner, (req, res) => {
+  if (!req.o.tags) req.o.tags = [];
+  const tag = req.o.tags.find(t => t.id === req.params.id);
+  if (!tag) return fail(res, 404, "Tag not found.");
+  tag.active = !tag.active;
+  if (tag.id === req.o.qrId) req.o.qrActive = tag.active;
+  save();
+  res.json({ ok: true, tag, tags: req.o.tags });
+});
+
+app.post("/api/me/tags/:id/regen", needOwner, (req, res) => {
+  if (!req.o.tags) req.o.tags = [];
+  const tag = req.o.tags.find(t => t.id === req.params.id);
+  if (!tag) return fail(res, 404, "Tag not found.");
+  tag.id = rnd(10);
+  if (req.o.qrId === req.params.id) req.o.qrId = tag.id;
+  save();
+  res.json({ ok: true, tag, tags: req.o.tags });
+});
+
+app.delete("/api/me/tags/:id", needOwner, (req, res) => {
+  if (!req.o.tags) req.o.tags = [];
+  if (req.o.tags.length <= 1) return fail(res, 400, "You must keep at least one QR tag.");
+  req.o.tags = req.o.tags.filter(t => t.id !== req.params.id);
+  if (req.o.qrId === req.params.id && req.o.tags.length) {
+    req.o.qrId = req.o.tags[0].id;
+  }
+  save();
+  res.json({ ok: true, tags: req.o.tags });
 });
 
 app.post("/api/me/pub", needOwner, (req, res) => {
@@ -194,24 +249,34 @@ app.post("/api/me/rooms/:id/:op", needOwner, (req, res) => {
 
 // --- finder (anonymous) ---
 app.get("/api/tag/:id", (req, res) => {
-  const o = tagOwner(req.params.id);
-  if (!o) return fail(res, 404, "Unknown tag.");
-  if (!o.qrActive) return fail(res, 410, "Inactive tag.");
-  res.json(o.pub);
+  const hit = findTag(req.params.id);
+  if (!hit) return fail(res, 404, "Unknown tag.");
+  if (!hit.tag.active || !hit.owner.qrActive) return fail(res, 410, "Inactive tag.");
+  res.json({
+    name: hit.owner.pub.name,
+    item: hit.tag.item,
+    itemName: hit.tag.item,
+    note: hit.owner.pub.note,
+    ver: hit.owner.pub.ver
+  });
 });
 
 app.post("/api/tag/:id/request", (req, res) => {
-  const o = tagOwner(req.params.id);
-  if (!o || !o.qrActive) return fail(res, 404, "Unknown tag.");
+  const hit = findTag(req.params.id);
+  if (!hit || !hit.tag.active || !hit.owner.qrActive) return fail(res, 404, "Unknown tag.");
+  const o = hit.owner;
   const ipH = sha(req.ip);
   if (o.blocked.includes(ipH)) return fail(res, 403, "Unable to contact this owner.");
   if (!limit("req" + ipH, 5, 3600e3)) return fail(res, 429, "Request limit reached. Try again later.");
-  const b = req.body, item = clip(b.item, 60), fname = clip(b.fname, 30), msg = clip(b.msg, MAX_LEN);
-  if (!item || !fname || !msg) return fail(res, 400, "Item, display name and message are required.");
+  const b = req.body;
+  const item = clip(b.item, 60) || hit.tag.item || "Found item";
+  const fname = clip(b.fname, 30);
+  const msg = clip(b.msg, MAX_LEN);
+  if (!fname || !msg) return fail(res, 400, "Display name and message are required.");
   const token = rnd(16), id = rnd(5);
   DB.rooms[id] = { id, ownerId: o.id, tokenHash: sha(token), ipH, item, fname, desc: clip(b.desc, 150), loc: clip(b.loc, 100),
     status: "pending", created: Date.now(), msgs: [{ from: "finder", text: msg, t: Date.now() }] };
-  note(o, "Someone may have found your belongings: " + item + (b.loc ? " (" + clip(b.loc, 100) + ")" : ""));
+  note(o, "Someone may have found your " + item + (b.loc ? " (" + clip(b.loc, 100) + ")" : ""));
   save();
   res.json({ roomToken: token });
 });
@@ -496,6 +561,7 @@ app.use("/api/reports", reportsRouter);
 app.use("/api/deals", dealsRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/upload", uploadRouter);
+app.use("/api/ai", aiRouter);
 
 app.use("/uploads", express.static(UPLOADS_DIR));
 app.use(express.static(path.join(__dirname, "public")));

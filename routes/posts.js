@@ -4,7 +4,55 @@ const { queries, buildCommentTree } = require("../db");
 const { limit, rateKey } = require("../middleware/rateLimit");
 const { requireUser } = require("../middleware/auth");
 const { eventBus } = require("../lib/events");
-const { clip, rnd, fail, containsLink, containsPhone, getMinAccountAgeForLinks } = require("../lib/utils");
+const { clip, rnd, fail, containsLink, containsPhone, getMinAccountAgeForLinks, encodeCursor, decodeCursor } = require("../lib/utils");
+
+// GET /api/posts - Global feed / multi-community feed
+router.get("/", (req, res) => {
+  try {
+    const userId = req.user ? req.user.id : null;
+    const sort = ["hot", "new", "top"].includes(req.query.sort) ? req.query.sort : "hot";
+    const t = ["day", "week", "month", "all"].includes(req.query.t) ? req.query.t : "all";
+    const tab = req.query.tab || "all";
+    const type = req.query.type ? clip(req.query.type, 25).toUpperCase() : null;
+    const status = req.query.status ? clip(req.query.status, 20).toLowerCase() : null;
+    const city = req.query.city ? clip(req.query.city, 50) : null;
+    const comm = req.query.community ? clip(req.query.community, 50) : null;
+    const lim = Math.min(Math.max(parseInt(req.query.limit, 10) || 25, 1), 100);
+
+    const decodedCursor = decodeCursor(req.query.cursor);
+    const page = req.query.page ? parseInt(req.query.page, 10) : null;
+
+    const result = queries.getPostsForCommunity(comm || "all", {
+      sort,
+      t,
+      cursor: decodedCursor,
+      page,
+      limit: lim,
+      userId,
+      type,
+      status,
+      city,
+      tab
+    });
+
+    const nextCursorEncoded = result.nextCursor ? encodeCursor(result.nextCursor) : null;
+
+    res.json({
+      posts: result.posts,
+      total: result.total,
+      pagination: {
+        page: result.page,
+        totalPages: result.totalPages,
+        limit: result.limit,
+        hasMore: result.hasMore,
+        nextCursor: nextCursorEncoded
+      }
+    });
+  } catch (err) {
+    console.error("GET /api/posts error:", err);
+    fail(res, 500, "Unable to load posts feed.");
+  }
+});
 
 // GET /api/posts/:id - Get a post with its comments
 router.get("/:id", (req, res) => {

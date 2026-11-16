@@ -20,6 +20,7 @@ const {
   getPostCooldownMs,
   DUPLICATE_POST_WINDOW_MS
 } = require("../lib/utils");
+const { moderateContent } = require("../lib/ai");
 
 // GET /api/communities - List all communities with post & member counts
 router.get("/", (req, res) => {
@@ -210,7 +211,7 @@ router.get("/:name/posts", (req, res) => {
 });
 
 // POST /api/communities/:name/posts - Create a new post (auth required)
-router.post("/:name/posts", requireUser, (req, res) => {
+router.post("/:name/posts", requireUser, async (req, res) => {
   const n = cname(req.params.name);
   const community = queries.getCommunity(n);
   if (!community) {
@@ -259,6 +260,12 @@ router.post("/:name/posts", requireUser, (req, res) => {
 
   if (!limit(rateKey(req, "post"), 10, 60e3)) {
     return fail(res, 429, "Slow down a little.");
+  }
+
+  // Automated AI & scam moderation check
+  const modCheck = await moderateContent(title, body);
+  if (modCheck && modCheck.flagAction === "block") {
+    return fail(res, 400, "Safety alert: " + (modCheck.reason || "Suspicious or unsafe content detected."));
   }
 
   // Emergency rule check (fixed keyword regex, no AI dependency)
